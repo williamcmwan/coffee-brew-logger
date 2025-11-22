@@ -615,7 +615,7 @@ export default function Brew() {
                   onClick={handleNext} 
                   className="flex-1"
                 >
-                  <Clock className="mr-2 h-4 w-4" />
+                  <Clock className="mr-1 h-4 w-4" />
                   Brew Timer
                 </Button>
               )}

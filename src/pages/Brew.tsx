@@ -213,11 +213,22 @@ export default function Brew() {
         </Button>
 
         <Card className="border-espresso/20">
-          <CardHeader>
+          <CardHeader className="relative">
             <CardTitle className="flex items-center gap-2 text-espresso">
               <Coffee className="h-6 w-6" />
               New Brew
             </CardTitle>
+            {step === 2 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleNext}
+                className="absolute top-4 right-4 flex flex-col items-center gap-1 h-auto py-2 px-3"
+              >
+                <Clock className="h-6 w-6" />
+                <span className="text-xs">Brew Timer</span>
+              </Button>
+            )}
             <CardDescription>Step {step} of 3</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -607,16 +618,6 @@ export default function Brew() {
                   className="flex-1"
                 >
                   Previous
-                </Button>
-              )}
-              {step === 2 && (
-                <Button 
-                  variant="outline"
-                  onClick={handleNext} 
-                  className="flex-1"
-                >
-                  <Clock className="mr-0.5 h-4 w-4" />
-                  Brew Timer
                 </Button>
               )}
               {step < 3 && (

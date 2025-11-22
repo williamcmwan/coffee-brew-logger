@@ -47,42 +47,47 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-4 gap-3">
           <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate("/settings")}>
-            <CardContent className="p-6 text-center">
-              <Coffee className="h-8 w-8 mx-auto mb-2 text-primary" />
-              <p className="font-medium text-sm">Equipment</p>
-            </CardContent>
-          </Card>
-          <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate("/history")}>
-            <CardContent className="p-6 text-center">
-              <History className="h-8 w-8 mx-auto mb-2 text-primary" />
-              <p className="font-medium text-sm">History</p>
+            <CardContent className="p-4 text-center">
+              <Settings className="h-6 w-6 mx-auto mb-1 text-primary" />
+              <p className="font-medium text-xs">Settings</p>
             </CardContent>
           </Card>
           <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate("/analytics")}>
-            <CardContent className="p-6 text-center">
-              <TrendingUp className="h-8 w-8 mx-auto mb-2 text-primary" />
-              <p className="font-medium text-sm">Analytics</p>
+            <CardContent className="p-4 text-center">
+              <TrendingUp className="h-6 w-6 mx-auto mb-1 text-primary" />
+              <p className="font-medium text-xs">Analytics</p>
             </CardContent>
           </Card>
           <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate("/comparison")}>
-            <CardContent className="p-6 text-center">
-              <GitCompare className="h-8 w-8 mx-auto mb-2 text-primary" />
-              <p className="font-medium text-sm">Compare</p>
+            <CardContent className="p-4 text-center">
+              <GitCompare className="h-6 w-6 mx-auto mb-1 text-primary" />
+              <p className="font-medium text-xs">Compare</p>
             </CardContent>
           </Card>
           <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate("/inventory")}>
-            <CardContent className="p-6 text-center">
-              <Package className="h-8 w-8 mx-auto mb-2 text-primary" />
-              <p className="font-medium text-sm">Inventory</p>
+            <CardContent className="p-4 text-center">
+              <Package className="h-6 w-6 mx-auto mb-1 text-primary" />
+              <p className="font-medium text-xs">Inventory</p>
             </CardContent>
           </Card>
         </div>
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Recent Brews</CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-lg">Recent Brews</CardTitle>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => navigate("/history")}
+                className="flex items-center gap-2"
+              >
+                <History className="h-4 w-4" />
+                View All
+              </Button>
+            </div>
           </CardHeader>
           <CardContent>
             {recentBrews.length === 0 ? (

@@ -25,10 +25,11 @@ import { toast } from "@/hooks/use-toast";
 
 export default function BrewHistory() {
   const navigate = useNavigate();
-  const { brews, coffeeBeans, grinders, brewers, recipes } = useApp();
+  const { brews, coffeeBeans, grinders, brewers, recipes, toggleBrewFavorite } = useApp();
   
   const [filterBean, setFilterBean] = useState<string>("all");
   const [filterRating, setFilterRating] = useState<string>("all");
+  const [filterFavorites, setFilterFavorites] = useState<string>("all");
   const [sortBy, setSortBy] = useState<string>("date-desc");
 
   // Helper functions to get entity names
@@ -67,6 +68,11 @@ export default function BrewHistory() {
       filtered = filtered.filter(brew => brew.rating === rating);
     }
 
+    // Filter by favorites
+    if (filterFavorites === "favorites") {
+      filtered = filtered.filter(brew => brew.favorite);
+    }
+
     // Sort
     filtered.sort((a, b) => {
       switch (sortBy) {
@@ -88,7 +94,7 @@ export default function BrewHistory() {
     });
 
     return filtered;
-  }, [brews, filterBean, filterRating, sortBy]);
+  }, [brews, filterBean, filterRating, filterFavorites, sortBy]);
 
   const renderStars = (rating: number | undefined) => {
     if (!rating) return null;
@@ -189,11 +195,27 @@ export default function BrewHistory() {
           </CardHeader>
           <CardContent>
             {/* Filters and Sort */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
               <div>
                 <label className="text-sm font-medium mb-2 flex items-center gap-2">
                   <Filter className="h-4 w-4" />
-                  Filter by Bean
+                  Show
+                </label>
+                <Select value={filterFavorites} onValueChange={setFilterFavorites}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Brews</SelectItem>
+                    <SelectItem value="favorites">Favorites Only</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <label className="text-sm font-medium mb-2 flex items-center gap-2">
+                  <Filter className="h-4 w-4" />
+                  Coffee Bean
                 </label>
                 <Select value={filterBean} onValueChange={setFilterBean}>
                   <SelectTrigger>
@@ -213,7 +235,7 @@ export default function BrewHistory() {
               <div>
                 <label className="text-sm font-medium mb-2 flex items-center gap-2">
                   <Star className="h-4 w-4" />
-                  Filter by Rating
+                  Rating
                 </label>
                 <Select value={filterRating} onValueChange={setFilterRating}>
                   <SelectTrigger>
@@ -264,7 +286,7 @@ export default function BrewHistory() {
                     <Card className="overflow-hidden hover:shadow-md transition-shadow">
                       <CollapsibleTrigger className="w-full">
                         <CardHeader className="cursor-pointer hover:bg-accent/50 transition-colors">
-                          <div className="flex items-start justify-between">
+                          <div className="flex items-start justify-between gap-2">
                             <div className="text-left flex-1">
                               <CardTitle className="text-lg mb-2">
                                 {getBeanName(brew.coffeeBeanId)}
@@ -277,18 +299,31 @@ export default function BrewHistory() {
                                 {renderStars(brew.rating)}
                               </div>
                             </div>
-                            <div className="flex flex-col gap-2 items-end">
-                              {brew.extractionYield && (
-                                <Badge variant="secondary" className="flex items-center gap-1">
-                                  <TrendingUp className="h-3 w-3" />
-                                  EY: {brew.extractionYield.toFixed(2)}%
-                                </Badge>
-                              )}
-                              {brew.tds && (
-                                <Badge variant="outline">
-                                  TDS: {brew.tds.toFixed(2)}%
-                                </Badge>
-                              )}
+                            <div className="flex gap-2 items-start">
+                              <Button 
+                                variant="ghost" 
+                                size="icon"
+                                className="shrink-0"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  toggleBrewFavorite(brew.id);
+                                }}
+                              >
+                                <Star className={`h-4 w-4 ${brew.favorite ? "fill-golden text-golden" : ""}`} />
+                              </Button>
+                              <div className="flex flex-col gap-2">
+                                {brew.extractionYield && (
+                                  <Badge variant="secondary" className="flex items-center gap-1">
+                                    <TrendingUp className="h-3 w-3" />
+                                    EY: {brew.extractionYield.toFixed(2)}%
+                                  </Badge>
+                                )}
+                                {brew.tds && (
+                                  <Badge variant="outline">
+                                    TDS: {brew.tds.toFixed(2)}%
+                                  </Badge>
+                                )}
+                              </div>
                             </div>
                           </div>
                         </CardHeader>

@@ -34,6 +34,7 @@ export interface Recipe {
   yield: number;
   temperature: number;
   brewTime: string;
+  favorite?: boolean;
 }
 
 export interface CoffeeBatch {
@@ -57,6 +58,7 @@ export interface CoffeeBean {
   tastingNotes: string;
   url?: string;
   batches: CoffeeBatch[];
+  favorite?: boolean;
 }
 
 export interface Brew {
@@ -78,6 +80,7 @@ export interface Brew {
   rating?: number;
   comment?: string;
   photo?: string;
+  favorite?: boolean;
 }
 
 interface AppContextType {
@@ -97,13 +100,16 @@ interface AppContextType {
   addRecipe: (recipe: Omit<Recipe, "id">) => void;
   updateRecipe: (id: string, recipe: Partial<Recipe>) => void;
   deleteRecipe: (id: string) => void;
+  toggleRecipeFavorite: (id: string) => void;
   coffeeBeans: CoffeeBean[];
   addCoffeeBean: (bean: Omit<CoffeeBean, "id">) => void;
   updateCoffeeBean: (id: string, bean: Partial<CoffeeBean>) => void;
   deleteCoffeeBean: (id: string) => void;
+  toggleCoffeeBeanFavorite: (id: string) => void;
   brews: Brew[];
   addBrew: (brew: Omit<Brew, "id">) => void;
   updateBrew: (id: string, brew: Partial<Brew>) => void;
+  toggleBrewFavorite: (id: string) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -254,6 +260,30 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     localStorage.setItem("brews", JSON.stringify(updated));
   };
 
+  const toggleRecipeFavorite = (id: string) => {
+    const updated = recipes.map((r) => 
+      r.id === id ? { ...r, favorite: !r.favorite } : r
+    );
+    setRecipes(updated);
+    localStorage.setItem("recipes", JSON.stringify(updated));
+  };
+
+  const toggleCoffeeBeanFavorite = (id: string) => {
+    const updated = coffeeBeans.map((b) => 
+      b.id === id ? { ...b, favorite: !b.favorite } : b
+    );
+    setCoffeeBeans(updated);
+    localStorage.setItem("coffeeBeans", JSON.stringify(updated));
+  };
+
+  const toggleBrewFavorite = (id: string) => {
+    const updated = brews.map((b) => 
+      b.id === id ? { ...b, favorite: !b.favorite } : b
+    );
+    setBrews(updated);
+    localStorage.setItem("brews", JSON.stringify(updated));
+  };
+
   return (
     <AppContext.Provider
       value={{
@@ -273,13 +303,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         addRecipe,
         updateRecipe,
         deleteRecipe,
+        toggleRecipeFavorite,
         coffeeBeans,
         addCoffeeBean,
         updateCoffeeBean,
         deleteCoffeeBean,
+        toggleCoffeeBeanFavorite,
         brews,
         addBrew,
         updateBrew,
+        toggleBrewFavorite,
       }}
     >
       {children}

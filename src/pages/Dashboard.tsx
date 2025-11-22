@@ -47,33 +47,6 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        <div className="grid grid-cols-4 gap-3">
-          <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate("/settings")}>
-            <CardContent className="p-4 text-center">
-              <Settings className="h-6 w-6 mx-auto mb-1 text-primary" />
-              <p className="font-medium text-xs">Settings</p>
-            </CardContent>
-          </Card>
-          <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate("/analytics")}>
-            <CardContent className="p-4 text-center">
-              <TrendingUp className="h-6 w-6 mx-auto mb-1 text-primary" />
-              <p className="font-medium text-xs">Analytics</p>
-            </CardContent>
-          </Card>
-          <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate("/comparison")}>
-            <CardContent className="p-4 text-center">
-              <GitCompare className="h-6 w-6 mx-auto mb-1 text-primary" />
-              <p className="font-medium text-xs">Compare</p>
-            </CardContent>
-          </Card>
-          <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate("/inventory")}>
-            <CardContent className="p-4 text-center">
-              <Package className="h-6 w-6 mx-auto mb-1 text-primary" />
-              <p className="font-medium text-xs">Inventory</p>
-            </CardContent>
-          </Card>
-        </div>
-
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
@@ -119,6 +92,33 @@ export default function Dashboard() {
             )}
           </CardContent>
         </Card>
+
+        <div className="grid grid-cols-4 gap-3">
+          <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate("/settings")}>
+            <CardContent className="p-4 text-center">
+              <Settings className="h-6 w-6 mx-auto mb-1 text-primary" />
+              <p className="font-medium text-xs">Settings</p>
+            </CardContent>
+          </Card>
+          <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate("/analytics")}>
+            <CardContent className="p-4 text-center">
+              <TrendingUp className="h-6 w-6 mx-auto mb-1 text-primary" />
+              <p className="font-medium text-xs">Analytics</p>
+            </CardContent>
+          </Card>
+          <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate("/comparison")}>
+            <CardContent className="p-4 text-center">
+              <GitCompare className="h-6 w-6 mx-auto mb-1 text-primary" />
+              <p className="font-medium text-xs">Compare</p>
+            </CardContent>
+          </Card>
+          <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate("/inventory")}>
+            <CardContent className="p-4 text-center">
+              <Package className="h-6 w-6 mx-auto mb-1 text-primary" />
+              <p className="font-medium text-xs">Inventory</p>
+            </CardContent>
+          </Card>
+        </div>
 
         <Button variant="outline" className="w-full" onClick={logout}>
           Sign out

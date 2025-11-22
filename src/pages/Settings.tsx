@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ArrowLeft, Coffee, Droplet, BookOpen, Bean } from "lucide-react";
+import { ArrowLeft, Coffee, Droplet, BookOpen, Bean, FileText } from "lucide-react";
 
 export default function Settings() {
   const navigate = useNavigate();
@@ -11,6 +11,7 @@ export default function Settings() {
     { title: "Brewers", icon: Droplet, path: "/settings/brewers" },
     { title: "Recipes", icon: BookOpen, path: "/settings/recipes" },
     { title: "Coffee Beans", icon: Bean, path: "/settings/beans" },
+    { title: "Brew Note Templates", icon: FileText, path: "/brew-templates" },
   ];
 
   return (

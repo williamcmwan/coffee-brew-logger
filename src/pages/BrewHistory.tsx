@@ -27,7 +27,7 @@ import { toast } from "@/hooks/use-toast";
 
 export default function BrewHistory() {
   const navigate = useNavigate();
-  const { brews, coffeeBeans, grinders, brewers, recipes, toggleBrewFavorite } = useApp();
+  const { brews, coffeeBeans, grinders, brewers, recipes, toggleBrewFavorite, brewTemplates } = useApp();
   
   const [filterBean, setFilterBean] = useState<string>("all");
   const [filterRating, setFilterRating] = useState<string>("all");
@@ -418,6 +418,38 @@ export default function BrewHistory() {
                                 alt="Brew"
                                 className="w-full max-w-md rounded-lg border border-espresso/20"
                               />
+                            </div>
+                          )}
+
+                          {/* Template Notes Section */}
+                          {brew.templateNotes && (
+                            <div className="mt-4">
+                              <h4 className="font-semibold mb-2 text-sm text-espresso">
+                                Custom Observations
+                              </h4>
+                              <div className="space-y-2">
+                                {(() => {
+                                  const template = brewTemplates.find(
+                                    t => t.id === brew.templateNotes?.templateId
+                                  );
+                                  if (!template) return null;
+                                  
+                                  return template.fields.map((field) => {
+                                    const value = brew.templateNotes?.fields[field.id];
+                                    if (!value) return null;
+                                    
+                                    return (
+                                      <div key={field.id} className="text-sm">
+                                        <span className="text-muted-foreground">{field.label}:</span>{" "}
+                                        <span className="font-medium">
+                                          {field.type === "rating" && "⭐".repeat(Number(value))}
+                                          {field.type !== "rating" && value}
+                                        </span>
+                                      </div>
+                                    );
+                                  });
+                                })()}
+                              </div>
                             </div>
                           )}
                         </CardContent>

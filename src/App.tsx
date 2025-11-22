@@ -16,6 +16,7 @@ import Recipes from "./pages/Recipes";
 import CoffeeBeans from "./pages/CoffeeBeans";
 import BrewComparison from "./pages/BrewComparison";
 import BrewTimer from "./pages/BrewTimer";
+import BrewTemplates from "./pages/BrewTemplates";
 import Inventory from "./pages/Inventory";
 import NotFound from "./pages/NotFound";
 
@@ -121,6 +122,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <BrewTimer />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/brew-templates"
+              element={
+                <ProtectedRoute>
+                  <BrewTemplates />
                 </ProtectedRoute>
               }
             />

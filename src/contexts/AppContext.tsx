@@ -5,6 +5,25 @@ export interface User {
   name: string;
 }
 
+export interface BrewTemplate {
+  id: string;
+  name: string;
+  fields: BrewTemplateField[];
+}
+
+export interface BrewTemplateField {
+  id: string;
+  label: string;
+  type: "text" | "number" | "rating" | "select";
+  required: boolean;
+  options?: string[]; // For select type
+}
+
+export interface BrewNotes {
+  templateId?: string;
+  fields: Record<string, any>;
+}
+
 export interface Grinder {
   id: string;
   model: string;
@@ -86,6 +105,7 @@ export interface Brew {
   comment?: string;
   photo?: string;
   favorite?: boolean;
+  templateNotes?: BrewNotes;
 }
 
 interface AppContextType {
@@ -115,6 +135,10 @@ interface AppContextType {
   addBrew: (brew: Omit<Brew, "id">) => void;
   updateBrew: (id: string, brew: Partial<Brew>) => void;
   toggleBrewFavorite: (id: string) => void;
+  brewTemplates: BrewTemplate[];
+  addBrewTemplate: (template: Omit<BrewTemplate, "id">) => void;
+  updateBrewTemplate: (id: string, template: Partial<BrewTemplate>) => void;
+  deleteBrewTemplate: (id: string) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -126,6 +150,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [coffeeBeans, setCoffeeBeans] = useState<CoffeeBean[]>([]);
   const [brews, setBrews] = useState<Brew[]>([]);
+  const [brewTemplates, setBrewTemplates] = useState<BrewTemplate[]>([]);
 
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
@@ -145,6 +170,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     
     const storedBrews = localStorage.getItem("brews");
     if (storedBrews) setBrews(JSON.parse(storedBrews));
+    
+    const storedTemplates = localStorage.getItem("brewTemplates");
+    if (storedTemplates) setBrewTemplates(JSON.parse(storedTemplates));
   }, []);
 
   const login = async (email: string, password: string) => {
@@ -289,6 +317,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     localStorage.setItem("brews", JSON.stringify(updated));
   };
 
+  const addBrewTemplate = (template: Omit<BrewTemplate, "id">) => {
+    const newTemplate = { ...template, id: Date.now().toString() };
+    const updated = [...brewTemplates, newTemplate];
+    setBrewTemplates(updated);
+    localStorage.setItem("brewTemplates", JSON.stringify(updated));
+  };
+
+  const updateBrewTemplate = (id: string, template: Partial<BrewTemplate>) => {
+    const updated = brewTemplates.map((t) => (t.id === id ? { ...t, ...template } : t));
+    setBrewTemplates(updated);
+    localStorage.setItem("brewTemplates", JSON.stringify(updated));
+  };
+
+  const deleteBrewTemplate = (id: string) => {
+    const updated = brewTemplates.filter((t) => t.id !== id);
+    setBrewTemplates(updated);
+    localStorage.setItem("brewTemplates", JSON.stringify(updated));
+  };
+
   return (
     <AppContext.Provider
       value={{
@@ -318,6 +365,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         addBrew,
         updateBrew,
         toggleBrewFavorite,
+        brewTemplates,
+        addBrewTemplate,
+        updateBrewTemplate,
+        deleteBrewTemplate,
       }}
     >
       {children}

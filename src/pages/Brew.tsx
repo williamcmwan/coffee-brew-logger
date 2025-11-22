@@ -13,7 +13,7 @@ import ImageUpload from "@/components/ImageUpload";
 
 export default function Brew() {
   const navigate = useNavigate();
-  const { coffeeBeans, grinders, brewers, recipes, addBrew } = useApp();
+  const { coffeeBeans, grinders, brewers, recipes, addBrew, brewTemplates } = useApp();
   
   const [step, setStep] = useState(1);
   const [selectedBeanId, setSelectedBeanId] = useState("");
@@ -21,6 +21,7 @@ export default function Brew() {
   const [selectedGrinderId, setSelectedGrinderId] = useState("");
   const [selectedBrewerId, setSelectedBrewerId] = useState("");
   const [selectedRecipeId, setSelectedRecipeId] = useState("");
+  const [selectedTemplateId, setSelectedTemplateId] = useState("");
   
   // Brew parameters
   const [dose, setDose] = useState("");
@@ -35,12 +36,14 @@ export default function Brew() {
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState("");
   const [photo, setPhoto] = useState("");
+  const [templateNotes, setTemplateNotes] = useState<Record<string, any>>({});
 
   const selectedBean = coffeeBeans.find(b => b.id === selectedBeanId);
   const selectedBatch = selectedBean?.batches.find(b => b.id === selectedBatchId);
   const selectedGrinder = grinders.find(g => g.id === selectedGrinderId);
   const selectedBrewer = brewers.find(b => b.id === selectedBrewerId);
   const selectedRecipe = recipes.find(r => r.id === selectedRecipeId);
+  const selectedTemplate = brewTemplates.find(t => t.id === selectedTemplateId);
   
   const filteredRecipes = recipes.filter(
     r => r.grinderId === selectedGrinderId && r.brewerId === selectedBrewerId
@@ -95,6 +98,20 @@ export default function Brew() {
       return;
     }
 
+    // Validate required template fields
+    if (selectedTemplate) {
+      const requiredFields = selectedTemplate.fields.filter(f => f.required);
+      const missingFields = requiredFields.filter(f => !templateNotes[f.id]);
+      if (missingFields.length > 0) {
+        toast({
+          title: "Required fields missing",
+          description: `Please fill in: ${missingFields.map(f => f.label).join(", ")}`,
+          variant: "destructive"
+        });
+        return;
+      }
+    }
+
     const extractionYield = calculateEY();
     
     addBrew({
@@ -115,6 +132,12 @@ export default function Brew() {
       rating,
       comment,
       photo,
+      ...(selectedTemplateId && {
+        templateNotes: {
+          templateId: selectedTemplateId,
+          fields: templateNotes,
+        },
+      }),
     });
 
     toast({ title: "Brew logged successfully!" });
@@ -453,6 +476,104 @@ export default function Brew() {
                     rows={4}
                   />
                 </div>
+
+                <div className="space-y-3">
+                  <Label>Brew Notes Template (Optional)</Label>
+                  <Select value={selectedTemplateId} onValueChange={setSelectedTemplateId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="No template" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">No template</SelectItem>
+                      {brewTemplates.map((template) => (
+                        <SelectItem key={template.id} value={template.id}>
+                          {template.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {brewTemplates.length === 0 && (
+                    <p className="text-xs text-muted-foreground">
+                      No templates available.{" "}
+                      <button
+                        type="button"
+                        className="underline"
+                        onClick={() => navigate("/brew-templates")}
+                      >
+                        Create one
+                      </button>
+                    </p>
+                  )}
+                </div>
+
+                {selectedTemplate && (
+                  <div className="space-y-4 p-4 bg-muted/50 rounded-lg">
+                    <h3 className="font-semibold text-sm">Custom Observations</h3>
+                    {selectedTemplate.fields.map((field) => (
+                      <div key={field.id} className="space-y-2">
+                        <Label>
+                          {field.label}
+                          {field.required && <span className="text-destructive ml-1">*</span>}
+                        </Label>
+                        {field.type === "text" && (
+                          <Input
+                            value={templateNotes[field.id] || ""}
+                            onChange={(e) =>
+                              setTemplateNotes({ ...templateNotes, [field.id]: e.target.value })
+                            }
+                            placeholder={`Enter ${field.label.toLowerCase()}`}
+                          />
+                        )}
+                        {field.type === "number" && (
+                          <Input
+                            type="number"
+                            value={templateNotes[field.id] || ""}
+                            onChange={(e) =>
+                              setTemplateNotes({ ...templateNotes, [field.id]: e.target.value })
+                            }
+                            placeholder={`Enter ${field.label.toLowerCase()}`}
+                          />
+                        )}
+                        {field.type === "rating" && (
+                          <div className="flex gap-2">
+                            {[1, 2, 3, 4, 5].map((value) => (
+                              <Button
+                                key={value}
+                                type="button"
+                                variant={templateNotes[field.id] === value ? "default" : "outline"}
+                                size="sm"
+                                onClick={() =>
+                                  setTemplateNotes({ ...templateNotes, [field.id]: value })
+                                }
+                              >
+                                {value}
+                              </Button>
+                            ))}
+                          </div>
+                        )}
+                        {field.type === "select" && field.options && (
+                          <Select
+                            value={templateNotes[field.id] || ""}
+                            onValueChange={(value) =>
+                              setTemplateNotes({ ...templateNotes, [field.id]: value })
+                            }
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder={`Select ${field.label.toLowerCase()}`} />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {field.options.map((option) => (
+                                <SelectItem key={option} value={option}>
+                                  {option}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 

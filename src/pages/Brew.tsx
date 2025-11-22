@@ -19,7 +19,7 @@ export default function Brew() {
   const fromTimer = location.state?.fromTimer;
   const initialBrewData = location.state?.brewData || location.state;
   
-  const [step, setStep] = useState(fromTimer ? 6 : (location.state?.step || 1));
+  const [step, setStep] = useState(fromTimer ? 3 : (location.state?.step || 1));
   const [selectedBeanId, setSelectedBeanId] = useState(initialBrewData?.coffeeBeanId || "");
   const [selectedBatchId, setSelectedBatchId] = useState(initialBrewData?.batchId || "");
   const [selectedGrinderId, setSelectedGrinderId] = useState(initialBrewData?.grinderId || "");
@@ -63,23 +63,25 @@ export default function Brew() {
   };
 
   const handleNext = () => {
-    if (step === 1 && (!selectedBeanId || !selectedBatchId)) {
-      toast({ title: "Please select a coffee bean and batch", variant: "destructive" });
-      return;
+    if (step === 1) {
+      if (!selectedBeanId || !selectedBatchId) {
+        toast({ title: "Please select a coffee bean and batch", variant: "destructive" });
+        return;
+      }
+      if (!selectedGrinderId) {
+        toast({ title: "Please select a grinder", variant: "destructive" });
+        return;
+      }
+      if (!selectedBrewerId) {
+        toast({ title: "Please select a brewer", variant: "destructive" });
+        return;
+      }
+      if (!selectedRecipeId) {
+        toast({ title: "Please select a recipe", variant: "destructive" });
+        return;
+      }
     }
-    if (step === 2 && !selectedGrinderId) {
-      toast({ title: "Please select a grinder", variant: "destructive" });
-      return;
-    }
-    if (step === 3 && !selectedBrewerId) {
-      toast({ title: "Please select a brewer", variant: "destructive" });
-      return;
-    }
-    if (step === 4 && !selectedRecipeId) {
-      toast({ title: "Please select a recipe", variant: "destructive" });
-      return;
-    }
-    if (step === 5) {
+    if (step === 2) {
       if (!dose || !grindSize || !water || !yieldAmount || !temperature || !brewTime) {
         toast({ title: "Please fill in all brew parameters", variant: "destructive" });
         return;
@@ -201,10 +203,10 @@ export default function Brew() {
               <Coffee className="h-6 w-6" />
               Log New Brew
             </CardTitle>
-            <CardDescription>Step {step} of 6</CardDescription>
+            <CardDescription>Step {step} of 3</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            {/* Step 1: Select Coffee Bean & Batch */}
+            {/* Step 1: Select All Equipment & Recipe */}
             {step === 1 && (
               <div className="space-y-4 animate-fade-in">
                 <div>
@@ -249,12 +251,7 @@ export default function Brew() {
                     No batches available. Please add a batch to this coffee bean first.
                   </p>
                 )}
-              </div>
-            )}
 
-            {/* Step 2: Select Grinder */}
-            {step === 2 && (
-              <div className="space-y-4 animate-fade-in">
                 <div>
                   <Label htmlFor="grinder">Grinder</Label>
                   <Select value={selectedGrinderId} onValueChange={setSelectedGrinderId}>
@@ -270,17 +267,7 @@ export default function Brew() {
                     </SelectContent>
                   </Select>
                 </div>
-                {grinders.length === 0 && (
-                  <p className="text-sm text-muted-foreground">
-                    No grinders available. Please add a grinder in settings first.
-                  </p>
-                )}
-              </div>
-            )}
 
-            {/* Step 3: Select Brewer */}
-            {step === 3 && (
-              <div className="space-y-4 animate-fade-in">
                 <div>
                   <Label htmlFor="brewer">Brewer</Label>
                   <Select value={selectedBrewerId} onValueChange={setSelectedBrewerId}>
@@ -296,17 +283,7 @@ export default function Brew() {
                     </SelectContent>
                   </Select>
                 </div>
-                {brewers.length === 0 && (
-                  <p className="text-sm text-muted-foreground">
-                    No brewers available. Please add a brewer in settings first.
-                  </p>
-                )}
-              </div>
-            )}
 
-            {/* Step 4: Select Recipe */}
-            {step === 4 && (
-              <div className="space-y-4 animate-fade-in">
                 <div>
                   <Label htmlFor="recipe">Recipe</Label>
                   <Select value={selectedRecipeId} onValueChange={handleRecipeSelect}>
@@ -322,15 +299,21 @@ export default function Brew() {
                     </SelectContent>
                   </Select>
                 </div>
-                {filteredRecipes.length === 0 && (
+                {filteredRecipes.length === 0 && selectedGrinderId && selectedBrewerId && (
                   <p className="text-sm text-muted-foreground">
                     No recipes available for this grinder and brewer combination. Please add a recipe in settings first.
                   </p>
                 )}
+              </div>
+            )}
+
+            {/* Step 2: Adjust Parameters */}
+            {step === 2 && (
+              <div className="space-y-4 animate-fade-in">
                 {selectedRecipe && (
                   <Card className="bg-cream/50">
                     <CardContent className="pt-6">
-                      <h4 className="font-medium mb-2">Recipe Details</h4>
+                      <h4 className="font-medium mb-2">Recipe Reference</h4>
                       <div className="grid grid-cols-2 gap-2 text-sm">
                         <div>Ratio: {selectedRecipe.ratio}</div>
                         <div>Dose: {selectedRecipe.dose}g</div>
@@ -343,13 +326,8 @@ export default function Brew() {
                     </CardContent>
                   </Card>
                 )}
-              </div>
-            )}
 
-            {/* Step 5: Adjust Parameters */}
-            {step === 5 && (
-              <div className="space-y-4 animate-fade-in">
-                <p className="text-sm text-muted-foreground mb-4">
+                <p className="text-sm text-muted-foreground">
                   Adjust parameters for this brew (pre-filled from recipe)
                 </p>
                 
@@ -441,8 +419,8 @@ export default function Brew() {
               </div>
             )}
 
-            {/* Step 6: Post-Brew Analysis */}
-            {step === 6 && (
+            {/* Step 3: Post-Brew Analysis */}
+            {step === 3 && (
               <div className="space-y-4 animate-fade-in">
                 <p className="text-sm text-muted-foreground mb-4">
                   Record your brew results
@@ -603,7 +581,7 @@ export default function Brew() {
 
             {/* Navigation Buttons */}
             <div className="flex gap-4 pt-4">
-              {step > 1 && step < 6 && (
+              {step > 1 && step < 3 && (
                 <Button
                   variant="outline"
                   onClick={() => setStep(step - 1)}
@@ -612,12 +590,12 @@ export default function Brew() {
                   Previous
                 </Button>
               )}
-              {step < 6 && (
+              {step < 3 && (
                 <Button onClick={handleNext} className="flex-1">
                   Next
                 </Button>
               )}
-              {step === 6 && (
+              {step === 3 && (
                 <Button onClick={handleSaveBrew} className="flex-1">
                   Save Brew
                 </Button>

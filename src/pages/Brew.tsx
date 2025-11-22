@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useApp } from "@/contexts/AppContext";
 import { Button } from "@/components/ui/button";
@@ -55,6 +55,18 @@ export default function Brew() {
   const filteredRecipes = recipes.filter(
     r => r.grinderId === selectedGrinderId && r.brewerId === selectedBrewerId
   );
+
+  // Pre-fill parameters when recipe is selected
+  useEffect(() => {
+    if (selectedRecipe && !initialBrewData) {
+      setDose(selectedRecipe.dose.toString());
+      setGrindSize(selectedRecipe.grindSize.toString());
+      setWater(selectedRecipe.water.toString());
+      setYieldAmount(selectedRecipe.yield.toString());
+      setTemperature(selectedRecipe.temperature.toString());
+      setBrewTime(selectedRecipe.brewTime);
+    }
+  }, [selectedRecipeId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const calculateEY = () => {
     if (!tds || !yieldAmount || !dose) return null;
@@ -335,7 +347,9 @@ export default function Brew() {
                   </div>
 
                   <div>
-                    <Label htmlFor="grindSize">Grind Size</Label>
+                    <Label htmlFor="grindSize">
+                      <span className="block">Grind Size</span>
+                    </Label>
                     <Input
                       id="grindSize"
                       type="number"
@@ -363,7 +377,9 @@ export default function Brew() {
                   </div>
 
                   <div>
-                    <Label htmlFor="yield">Yield (g)</Label>
+                    <Label htmlFor="yield">
+                      <span className="block">Yield (g)</span>
+                    </Label>
                     <Input
                       id="yield"
                       type="number"

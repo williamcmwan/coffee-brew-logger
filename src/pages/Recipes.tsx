@@ -3,7 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { useApp } from "@/contexts/AppContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ArrowLeft, Plus, Pencil, Trash2, BookOpen, Timer } from "lucide-react";
+import { ArrowLeft, Plus, Pencil, Trash2, BookOpen, Timer, Star, Filter } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RecipeDialog } from "@/components/equipment/RecipeDialog";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -19,12 +20,13 @@ import {
 import type { Recipe } from "@/contexts/AppContext";
 
 export default function Recipes() {
-  const { recipes, grinders, brewers, deleteRecipe } = useApp();
+  const { recipes, grinders, brewers, deleteRecipe, toggleRecipeFavorite } = useApp();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingRecipe, setEditingRecipe] = useState<Recipe | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [filter, setFilter] = useState<string>("all");
 
   const getGrinderName = (id: string) => grinders.find((g) => g.id === id)?.model || "Unknown";
   const getBrewerName = (id: string) => brewers.find((b) => b.id === id)?.model || "Unknown";
@@ -48,6 +50,10 @@ export default function Recipes() {
     });
   };
 
+  const filteredRecipes = filter === "favorites" 
+    ? recipes.filter(r => r.favorite) 
+    : recipes;
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-secondary/20 to-background">
       <div className="container max-w-lg mx-auto p-4 space-y-6">
@@ -63,17 +69,34 @@ export default function Recipes() {
           </Button>
         </div>
 
-        {recipes.length === 0 ? (
+        {recipes.length > 0 && (
+          <div className="flex items-center gap-2">
+            <Filter className="h-4 w-4 text-muted-foreground" />
+            <Select value={filter} onValueChange={setFilter}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Recipes</SelectItem>
+                <SelectItem value="favorites">Favorites Only</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+
+        {filteredRecipes.length === 0 ? (
           <Card>
             <CardContent className="p-12 text-center">
               <BookOpen className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-              <p className="text-muted-foreground mb-4">No recipes added yet</p>
+              <p className="text-muted-foreground mb-4">
+                {filter === "favorites" ? "No favorite recipes yet" : "No recipes added yet"}
+              </p>
               <Button onClick={handleAdd}>Add Your First Recipe</Button>
             </CardContent>
           </Card>
         ) : (
           <div className="space-y-3">
-            {recipes.map((recipe) => (
+            {filteredRecipes.map((recipe) => (
               <Card key={recipe.id} className="hover:shadow-md transition-shadow">
                 <CardContent className="p-4">
                   <div className="flex items-start gap-4">
@@ -111,6 +134,13 @@ export default function Recipes() {
                       </Button>
                     </div>
                     <div className="flex gap-2">
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        onClick={() => toggleRecipeFavorite(recipe.id)}
+                      >
+                        <Star className={`h-4 w-4 ${recipe.favorite ? "fill-golden text-golden" : ""}`} />
+                      </Button>
                       <Button variant="ghost" size="icon" onClick={() => handleEdit(recipe)}>
                         <Pencil className="h-4 w-4" />
                       </Button>

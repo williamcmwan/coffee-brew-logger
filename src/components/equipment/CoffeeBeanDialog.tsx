@@ -87,13 +87,18 @@ export function CoffeeBeanDialog({ open, onOpenChange, bean }: CoffeeBeanDialogP
   }, [bean, setValue, reset]);
 
   const addBatch = () => {
+    const today = new Date().toISOString().split("T")[0];
     setBatches([
       ...batches,
       {
         id: Date.now().toString(),
         price: 0,
-        roastDate: new Date().toISOString().split("T")[0],
+        roastDate: today,
         weight: 250,
+        currentWeight: 250,
+        purchaseDate: today,
+        isActive: true,
+        notes: "",
       },
     ]);
   };
@@ -214,25 +219,52 @@ export function CoffeeBeanDialog({ open, onOpenChange, bean }: CoffeeBeanDialogP
             </div>
             {batches.map((batch) => (
               <div key={batch.id} className="flex gap-2 items-start p-3 rounded-lg bg-muted">
-                <div className="flex-1 grid grid-cols-3 gap-2">
-                  <Input
-                    type="number"
-                    placeholder="Price"
-                    value={batch.price}
-                    onChange={(e) => updateBatch(batch.id, "price", parseFloat(e.target.value))}
-                    step="0.01"
-                  />
-                  <Input
-                    type="date"
-                    value={batch.roastDate}
-                    onChange={(e) => updateBatch(batch.id, "roastDate", e.target.value)}
-                  />
-                  <Input
-                    type="number"
-                    placeholder="Weight (g)"
-                    value={batch.weight}
-                    onChange={(e) => updateBatch(batch.id, "weight", parseFloat(e.target.value))}
-                  />
+                <div className="flex-1 space-y-2">
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <Label className="text-xs">Price ($)</Label>
+                      <Input
+                        type="number"
+                        placeholder="Price"
+                        value={batch.price}
+                        onChange={(e) => updateBatch(batch.id, "price", parseFloat(e.target.value) || 0)}
+                        step="0.01"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs">Weight (g)</Label>
+                      <Input
+                        type="number"
+                        placeholder="Weight"
+                        value={batch.weight}
+                        onChange={(e) => {
+                          const weight = parseFloat(e.target.value) || 0;
+                          updateBatch(batch.id, "weight", weight);
+                          if (!bean) {
+                            updateBatch(batch.id, "currentWeight", weight);
+                          }
+                        }}
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <Label className="text-xs">Purchase Date</Label>
+                      <Input
+                        type="date"
+                        value={batch.purchaseDate}
+                        onChange={(e) => updateBatch(batch.id, "purchaseDate", e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs">Roast Date</Label>
+                      <Input
+                        type="date"
+                        value={batch.roastDate}
+                        onChange={(e) => updateBatch(batch.id, "roastDate", e.target.value)}
+                      />
+                    </div>
+                  </div>
                 </div>
                 <Button
                   type="button"

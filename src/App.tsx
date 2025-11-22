@@ -9,13 +9,14 @@ import Dashboard from "./pages/Dashboard";
 import Brew from "./pages/Brew";
 import BrewHistory from "./pages/BrewHistory";
 import Analytics from "./pages/Analytics";
-import BrewComparison from "./pages/BrewComparison";
-import BrewTimer from "./pages/BrewTimer";
 import Settings from "./pages/Settings";
 import Grinders from "./pages/Grinders";
 import Brewers from "./pages/Brewers";
 import Recipes from "./pages/Recipes";
 import CoffeeBeans from "./pages/CoffeeBeans";
+import BrewComparison from "./pages/BrewComparison";
+import BrewTimer from "./pages/BrewTimer";
+import Inventory from "./pages/Inventory";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -120,6 +121,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <BrewTimer />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/inventory"
+              element={
+                <ProtectedRoute>
+                  <Inventory />
                 </ProtectedRoute>
               }
             />

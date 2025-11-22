@@ -42,6 +42,10 @@ export interface CoffeeBatch {
   price: number;
   roastDate: string;
   weight: number;
+  currentWeight: number;
+  purchaseDate: string;
+  notes?: string;
+  isActive: boolean;
 }
 
 export interface CoffeeBean {
@@ -59,6 +63,7 @@ export interface CoffeeBean {
   url?: string;
   batches: CoffeeBatch[];
   favorite?: boolean;
+  lowStockThreshold?: number;
 }
 
 export interface Brew {

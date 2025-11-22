@@ -599,7 +599,7 @@ export default function Brew() {
             )}
 
             {/* Navigation Buttons */}
-            <div className="flex gap-4 pt-4">
+            <div className="flex gap-2 pt-4">
               {step > 1 && step < 3 && (
                 <Button
                   variant="outline"

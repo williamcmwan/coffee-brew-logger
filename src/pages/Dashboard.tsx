@@ -2,7 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { useApp } from "@/contexts/AppContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Coffee, Settings, Plus, History, TrendingUp } from "lucide-react";
+import { Coffee, Settings, Plus, History, TrendingUp, GitCompare } from "lucide-react";
 
 export default function Dashboard() {
   const { user, brews, logout } = useApp();
@@ -42,7 +42,7 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-2 gap-4">
           <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate("/settings")}>
             <CardContent className="p-6 text-center">
               <Coffee className="h-8 w-8 mx-auto mb-2 text-primary" />
@@ -59,6 +59,12 @@ export default function Dashboard() {
             <CardContent className="p-6 text-center">
               <TrendingUp className="h-8 w-8 mx-auto mb-2 text-primary" />
               <p className="font-medium text-sm">Analytics</p>
+            </CardContent>
+          </Card>
+          <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate("/comparison")}>
+            <CardContent className="p-6 text-center">
+              <GitCompare className="h-8 w-8 mx-auto mb-2 text-primary" />
+              <p className="font-medium text-sm">Compare</p>
             </CardContent>
           </Card>
         </div>

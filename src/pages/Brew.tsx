@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useApp } from "@/contexts/AppContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,23 +13,27 @@ import ImageUpload from "@/components/ImageUpload";
 
 export default function Brew() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { coffeeBeans, grinders, brewers, recipes, addBrew, brewTemplates } = useApp();
   
-  const [step, setStep] = useState(1);
-  const [selectedBeanId, setSelectedBeanId] = useState("");
-  const [selectedBatchId, setSelectedBatchId] = useState("");
-  const [selectedGrinderId, setSelectedGrinderId] = useState("");
-  const [selectedBrewerId, setSelectedBrewerId] = useState("");
-  const [selectedRecipeId, setSelectedRecipeId] = useState("");
+  const fromTimer = location.state?.fromTimer;
+  const initialBrewData = location.state;
+  
+  const [step, setStep] = useState(fromTimer ? 6 : (location.state?.step || 1));
+  const [selectedBeanId, setSelectedBeanId] = useState(initialBrewData?.coffeeBeanId || "");
+  const [selectedBatchId, setSelectedBatchId] = useState(initialBrewData?.batchId || "");
+  const [selectedGrinderId, setSelectedGrinderId] = useState(initialBrewData?.grinderId || "");
+  const [selectedBrewerId, setSelectedBrewerId] = useState(initialBrewData?.brewerId || "");
+  const [selectedRecipeId, setSelectedRecipeId] = useState(initialBrewData?.recipeId || "");
   const [selectedTemplateId, setSelectedTemplateId] = useState("");
   
   // Brew parameters
-  const [dose, setDose] = useState("");
-  const [grindSize, setGrindSize] = useState("");
-  const [water, setWater] = useState("");
-  const [yieldAmount, setYieldAmount] = useState("");
-  const [temperature, setTemperature] = useState("");
-  const [brewTime, setBrewTime] = useState("");
+  const [dose, setDose] = useState(initialBrewData?.dose?.toString() || "");
+  const [grindSize, setGrindSize] = useState(initialBrewData?.grindSize?.toString() || "");
+  const [water, setWater] = useState(initialBrewData?.water?.toString() || "");
+  const [yieldAmount, setYieldAmount] = useState(initialBrewData?.yield?.toString() || "");
+  const [temperature, setTemperature] = useState(initialBrewData?.temperature?.toString() || "");
+  const [brewTime, setBrewTime] = useState(initialBrewData?.brewTime || "");
   
   // Post-brew data
   const [tds, setTds] = useState("");
@@ -54,7 +58,8 @@ export default function Brew() {
     const tdsNum = parseFloat(tds);
     const yieldNum = parseFloat(yieldAmount);
     const doseNum = parseFloat(dose);
-    return ((tdsNum * yieldNum / doseNum) * 100).toFixed(2);
+    // Correct EY formula: (TDS × Brew Weight / Dose) × 100
+    return ((tdsNum * yieldNum / doseNum)).toFixed(2);
   };
 
   const handleNext = () => {
@@ -79,6 +84,25 @@ export default function Brew() {
         toast({ title: "Please fill in all brew parameters", variant: "destructive" });
         return;
       }
+      // Navigate to brew timer after parameters are set
+      navigate('/brew-timer', { 
+        state: { 
+          brewData: {
+            coffeeBeanId: selectedBeanId,
+            batchId: selectedBatchId,
+            grinderId: selectedGrinderId,
+            brewerId: selectedBrewerId,
+            recipeId: selectedRecipeId,
+            dose: parseFloat(dose),
+            grindSize: parseFloat(grindSize),
+            water: parseFloat(water),
+            yield: parseFloat(yieldAmount),
+            temperature: parseFloat(temperature),
+            brewTime,
+          }
+        } 
+      });
+      return;
     }
     setStep(step + 1);
   };

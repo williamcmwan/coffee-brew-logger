@@ -133,7 +133,7 @@ export default function Recipes() {
                         className="mt-2"
                       >
                         <Timer className="h-4 w-4 mr-2" />
-                        Timer
+                        Preview Timer
                       </Button>
                       <ShareButton
                         title={`Coffee Recipe: ${recipe.name}`}

@@ -14,9 +14,14 @@ export default function Dashboard() {
     <div className="min-h-screen bg-gradient-to-br from-background via-secondary/20 to-background">
       <div className="container max-w-lg mx-auto p-4 space-y-6">
         <div className="flex items-center justify-between pt-4">
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">Hello, {user?.name}</h1>
-            <p className="text-sm text-muted-foreground">Ready to brew?</p>
+          <div className="flex items-center gap-3">
+            <div className="rounded-full bg-primary/10 p-2">
+              <Coffee className="h-6 w-6 text-primary" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-foreground">Hello, {user?.name}</h1>
+              <p className="text-sm text-muted-foreground">Ready to brew?</p>
+            </div>
           </div>
           <Button variant="ghost" size="icon" onClick={() => navigate("/settings")}>
             <Settings className="h-5 w-5" />
@@ -24,19 +29,19 @@ export default function Dashboard() {
         </div>
 
         <Card className="bg-gradient-to-br from-primary to-primary/80 text-primary-foreground border-0">
-          <CardContent className="p-6">
+          <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm opacity-90 mb-2">Start brewing</p>
-                <h2 className="text-xl font-bold">New Brew Session</h2>
+                <p className="text-sm opacity-90 mb-1">Start brewing</p>
+                <h2 className="text-lg font-bold">New Brew Session</h2>
               </div>
               <Button
                 size="lg"
                 variant="secondary"
                 onClick={() => navigate("/brew")}
-                className="rounded-full h-14 w-14"
+                className="rounded-full h-12 w-12"
               >
-                <Plus className="h-6 w-6" />
+                <Plus className="h-5 w-5" />
               </Button>
             </div>
           </CardContent>

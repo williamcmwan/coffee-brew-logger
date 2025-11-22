@@ -7,6 +7,10 @@ import { AppProvider, useApp } from "./contexts/AppContext";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Settings from "./pages/Settings";
+import Grinders from "./pages/Grinders";
+import Brewers from "./pages/Brewers";
+import Recipes from "./pages/Recipes";
+import CoffeeBeans from "./pages/CoffeeBeans";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -39,6 +43,38 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <Settings />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/settings/grinders"
+              element={
+                <ProtectedRoute>
+                  <Grinders />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/settings/brewers"
+              element={
+                <ProtectedRoute>
+                  <Brewers />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/settings/recipes"
+              element={
+                <ProtectedRoute>
+                  <Recipes />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/settings/beans"
+              element={
+                <ProtectedRoute>
+                  <CoffeeBeans />
                 </ProtectedRoute>
               }
             />

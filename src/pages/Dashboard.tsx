@@ -12,7 +12,7 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-secondary/20 to-background">
-      <div className="container max-w-lg mx-auto p-4 space-y-6">
+      <div className="container max-w-lg mx-auto p-4 space-y-4">
         <div className="flex items-center justify-between pt-4">
           <div className="flex items-center gap-3">
             <div className="rounded-full bg-primary/10 p-2">
@@ -29,17 +29,14 @@ export default function Dashboard() {
         </div>
 
         <Card className="bg-gradient-to-br from-primary to-primary/80 text-primary-foreground border-0">
-          <CardContent className="p-4">
+          <CardContent className="p-3">
             <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm opacity-90 mb-1">Start brewing</p>
-                <h2 className="text-lg font-bold">New Brew Session</h2>
-              </div>
+              <h2 className="text-base font-bold">New Brew Session</h2>
               <Button
                 size="lg"
                 variant="secondary"
                 onClick={() => navigate("/brew")}
-                className="rounded-full h-12 w-12"
+                className="rounded-full h-10 w-10"
               >
                 <Plus className="h-5 w-5" />
               </Button>
@@ -109,7 +106,7 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        <div className="grid grid-cols-4 gap-3">
+        <div className="grid grid-cols-4 gap-3 !mt-3">
           <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate("/settings")}>
             <CardContent className="p-4 text-center">
               <Settings className="h-6 w-6 mx-auto mb-1 text-primary" />

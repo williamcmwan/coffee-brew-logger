@@ -189,18 +189,13 @@ export default function Brew() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-cream to-background p-4">
       <div className="max-w-2xl mx-auto">
-        <Button
-          variant="ghost"
-          onClick={handleBack}
-          className="mb-4"
-        >
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Back
-        </Button>
-
         <Card className="border-espresso/20">
           <CardHeader className="relative">
             <CardTitle className="flex items-center gap-2 text-espresso">
+              <ArrowLeft 
+                className="h-6 w-6 cursor-pointer hover:opacity-70 transition-opacity" 
+                onClick={handleBack}
+              />
               <Coffee className="h-6 w-6" />
               New Brew
             </CardTitle>

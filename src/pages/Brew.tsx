@@ -617,7 +617,7 @@ export default function Brew() {
 
         {/* Brew Timer Dialog */}
         <Dialog open={timerDialogOpen} onOpenChange={setTimerDialogOpen}>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-0">
+          <DialogContent className="max-w-2xl h-[100vh] max-h-[100vh] overflow-y-auto p-0">
             <BrewTimerContent 
               recipe={selectedRecipe}
               onClose={() => setTimerDialogOpen(false)}

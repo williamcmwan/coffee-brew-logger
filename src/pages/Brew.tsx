@@ -17,7 +17,7 @@ export default function Brew() {
   const { coffeeBeans, grinders, brewers, recipes, addBrew, brewTemplates } = useApp();
   
   const fromTimer = location.state?.fromTimer;
-  const initialBrewData = location.state;
+  const initialBrewData = location.state?.brewData || location.state;
   
   const [step, setStep] = useState(fromTimer ? 6 : (location.state?.step || 1));
   const [selectedBeanId, setSelectedBeanId] = useState(initialBrewData?.coffeeBeanId || "");
@@ -88,6 +88,7 @@ export default function Brew() {
       navigate('/brew-timer', { 
         state: { 
           brewData: {
+            recipe: selectedRecipe,
             coffeeBeanId: selectedBeanId,
             batchId: selectedBatchId,
             grinderId: selectedGrinderId,

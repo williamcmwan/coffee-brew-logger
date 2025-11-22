@@ -18,8 +18,10 @@ export default function BrewTimer() {
   const navigate = useNavigate();
   const { recipes, grinders, brewers } = useApp();
   
-  const recipeId = location.state?.recipeId;
-  const recipe = recipes.find(r => r.id === recipeId);
+  // Handle both preview mode (from Recipes) and brew mode (from Brew workflow)
+  const brewData = location.state?.brewData;
+  const recipeId = location.state?.recipeId || brewData?.recipe?.id;
+  const recipe = brewData?.recipe || recipes.find(r => r.id === recipeId);
   
   const [steps, setSteps] = useState<TimerStep[]>([]);
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
@@ -271,7 +273,15 @@ export default function BrewTimer() {
                     <RotateCcw className="mr-2 h-5 w-5" />
                     Brew Again
                   </Button>
-                  <Button onClick={() => navigate('/brew', { state: { recipeId } })} size="lg" className="flex-1">
+                  <Button onClick={() => {
+                    if (brewData) {
+                      // Return to brew workflow with brew data
+                      navigate('/brew', { state: { brewData, fromTimer: true } });
+                    } else {
+                      // Start new brew with this recipe
+                      navigate('/brew', { state: { recipeId } });
+                    }
+                  }} size="lg" className="flex-1">
                     Log This Brew
                   </Button>
                 </div>

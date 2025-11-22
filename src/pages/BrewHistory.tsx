@@ -5,13 +5,23 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Coffee, Calendar, Star, TrendingUp, Filter, SortAsc } from "lucide-react";
+import { ArrowLeft, Coffee, Calendar, Star, TrendingUp, Filter, SortAsc, Download, FileText, FileSpreadsheet } from "lucide-react";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { Separator } from "@/components/ui/separator";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { exportToCSV, exportToPDF } from "@/lib/exportUtils";
+import { toast } from "@/hooks/use-toast";
 
 export default function BrewHistory() {
   const navigate = useNavigate();
@@ -96,6 +106,38 @@ export default function BrewHistory() {
     );
   };
 
+  const handleExportCSV = () => {
+    try {
+      exportToCSV(filteredAndSortedBrews, coffeeBeans, grinders, brewers, recipes);
+      toast({
+        title: "Export successful",
+        description: "Brew history exported to CSV",
+      });
+    } catch (error) {
+      toast({
+        title: "Export failed",
+        description: "Failed to export brew history to CSV",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleExportPDF = () => {
+    try {
+      exportToPDF(filteredAndSortedBrews, coffeeBeans, grinders, brewers, recipes);
+      toast({
+        title: "Export successful",
+        description: "Brew history exported to PDF",
+      });
+    } catch (error) {
+      toast({
+        title: "Export failed",
+        description: "Failed to export brew history to PDF",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-cream to-background p-4">
       <div className="max-w-4xl mx-auto">
@@ -110,13 +152,40 @@ export default function BrewHistory() {
 
         <Card className="border-espresso/20 mb-6">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-espresso">
-              <Coffee className="h-6 w-6" />
-              Brew History
-            </CardTitle>
-            <CardDescription>
-              {filteredAndSortedBrews.length} brew{filteredAndSortedBrews.length !== 1 ? 's' : ''} recorded
-            </CardDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2 text-espresso">
+                  <Coffee className="h-6 w-6" />
+                  Brew History
+                </CardTitle>
+                <CardDescription>
+                  {filteredAndSortedBrews.length} brew{filteredAndSortedBrews.length !== 1 ? 's' : ''} recorded
+                </CardDescription>
+              </div>
+              
+              {filteredAndSortedBrews.length > 0 && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm">
+                      <Download className="h-4 w-4 mr-2" />
+                      Export
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48">
+                    <DropdownMenuLabel>Export Format</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={handleExportCSV}>
+                      <FileSpreadsheet className="h-4 w-4 mr-2" />
+                      Export as CSV
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleExportPDF}>
+                      <FileText className="h-4 w-4 mr-2" />
+                      Export as PDF
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+            </div>
           </CardHeader>
           <CardContent>
             {/* Filters and Sort */}

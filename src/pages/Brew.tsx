@@ -14,17 +14,20 @@ import ImageUpload from "@/components/ImageUpload";
 export default function Brew() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { coffeeBeans, grinders, brewers, recipes, addBrew, brewTemplates } = useApp();
+  const { coffeeBeans, grinders, brewers, recipes, addBrew, brewTemplates, brews } = useApp();
   
   const fromTimer = location.state?.fromTimer;
   const initialBrewData = location.state?.brewData || location.state;
   
+  // Get last brew for defaults
+  const lastBrew = brews.length > 0 ? brews[brews.length - 1] : null;
+  
   const [step, setStep] = useState(fromTimer ? 3 : (location.state?.step || 1));
-  const [selectedBeanId, setSelectedBeanId] = useState(initialBrewData?.coffeeBeanId || "");
-  const [selectedBatchId, setSelectedBatchId] = useState(initialBrewData?.batchId || "");
-  const [selectedGrinderId, setSelectedGrinderId] = useState(initialBrewData?.grinderId || "");
-  const [selectedBrewerId, setSelectedBrewerId] = useState(initialBrewData?.brewerId || "");
-  const [selectedRecipeId, setSelectedRecipeId] = useState(initialBrewData?.recipeId || "");
+  const [selectedBeanId, setSelectedBeanId] = useState(initialBrewData?.coffeeBeanId || lastBrew?.coffeeBeanId || "");
+  const [selectedBatchId, setSelectedBatchId] = useState(initialBrewData?.batchId || lastBrew?.batchId || "");
+  const [selectedGrinderId, setSelectedGrinderId] = useState(initialBrewData?.grinderId || lastBrew?.grinderId || "");
+  const [selectedBrewerId, setSelectedBrewerId] = useState(initialBrewData?.brewerId || lastBrew?.brewerId || "");
+  const [selectedRecipeId, setSelectedRecipeId] = useState(initialBrewData?.recipeId || lastBrew?.recipeId || "");
   const [selectedTemplateId, setSelectedTemplateId] = useState("");
   
   // Brew parameters
@@ -201,7 +204,7 @@ export default function Brew() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-espresso">
               <Coffee className="h-6 w-6" />
-              Log New Brew
+              New Brew
             </CardTitle>
             <CardDescription>Step {step} of 3</CardDescription>
           </CardHeader>

@@ -7,9 +7,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { ArrowLeft, Coffee, Droplets, Thermometer, Clock, Scale, Star } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import ImageUpload from "@/components/ImageUpload";
+import BrewTimerContent from "@/components/BrewTimerContent";
 
 export default function Brew() {
   const navigate = useNavigate();
@@ -44,6 +46,7 @@ export default function Brew() {
   const [comment, setComment] = useState("");
   const [photo, setPhoto] = useState("");
   const [templateNotes, setTemplateNotes] = useState<Record<string, any>>({});
+  const [timerDialogOpen, setTimerDialogOpen] = useState(false);
 
   const selectedBean = coffeeBeans.find(b => b.id === selectedBeanId);
   const selectedBatch = selectedBean?.batches.find(b => b.id === selectedBatchId);
@@ -101,25 +104,8 @@ export default function Brew() {
         toast({ title: "Please fill in all brew parameters", variant: "destructive" });
         return;
       }
-      // Navigate to brew timer after parameters are set
-      navigate('/brew-timer', { 
-        state: { 
-          brewData: {
-            recipe: selectedRecipe,
-            coffeeBeanId: selectedBeanId,
-            batchId: selectedBatchId,
-            grinderId: selectedGrinderId,
-            brewerId: selectedBrewerId,
-            recipeId: selectedRecipeId,
-            dose: parseFloat(dose),
-            grindSize: parseFloat(grindSize),
-            water: parseFloat(water),
-            yield: parseFloat(yieldAmount),
-            temperature: parseFloat(temperature),
-            brewTime,
-          }
-        } 
-      });
+      // Open timer dialog
+      setTimerDialogOpen(true);
       return;
     }
     setStep(step + 1);
@@ -222,7 +208,7 @@ export default function Brew() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={handleNext}
+                onClick={() => setTimerDialogOpen(true)}
                 className="absolute top-4 right-4 flex flex-col items-center gap-1 h-auto py-2 px-3"
               >
                 <Clock className="h-6 w-6" />
@@ -633,6 +619,20 @@ export default function Brew() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Brew Timer Dialog */}
+        <Dialog open={timerDialogOpen} onOpenChange={setTimerDialogOpen}>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-0">
+            <BrewTimerContent 
+              recipe={selectedRecipe}
+              onClose={() => setTimerDialogOpen(false)}
+              onComplete={() => {
+                setTimerDialogOpen(false);
+                setStep(3);
+              }}
+            />
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );

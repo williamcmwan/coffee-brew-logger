@@ -421,6 +421,15 @@ export default function Brew() {
                   </div>
                 </div>
 
+                {selectedRecipe?.process && (
+                  <div className="space-y-2">
+                    <Label>Process</Label>
+                    <div className="p-3 rounded-md bg-muted/50 text-sm">
+                      {selectedRecipe.process}
+                    </div>
+                  </div>
+                )}
+
                 <ImageUpload
                   value={photo}
                   onChange={setPhoto}

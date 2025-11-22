@@ -20,6 +20,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { ShareButton } from "@/components/ShareButton";
+import { generateBrewShareText } from "@/lib/shareUtils";
 import { exportToCSV, exportToPDF } from "@/lib/exportUtils";
 import { toast } from "@/hooks/use-toast";
 
@@ -300,6 +302,18 @@ export default function BrewHistory() {
                               </div>
                             </div>
                             <div className="flex gap-2 items-start">
+                              <ShareButton
+                                title={`Coffee Brew - ${getBeanName(brew.coffeeBeanId)}`}
+                                text={generateBrewShareText(
+                                  brew,
+                                  getBeanName(brew.coffeeBeanId),
+                                  getGrinderName(brew.grinderId),
+                                  getBrewerName(brew.brewerId),
+                                  getRecipeName(brew.recipeId)
+                                )}
+                                size="icon"
+                                variant="ghost"
+                              />
                               <Button 
                                 variant="ghost" 
                                 size="icon"

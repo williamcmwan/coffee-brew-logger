@@ -6,6 +6,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { ArrowLeft, Plus, Pencil, Trash2, BookOpen, Timer, Star, Filter } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RecipeDialog } from "@/components/equipment/RecipeDialog";
+import { ShareButton } from "@/components/ShareButton";
+import { generateRecipeShareText } from "@/lib/shareUtils";
 import { useToast } from "@/hooks/use-toast";
 import {
   AlertDialog,
@@ -127,11 +129,22 @@ export default function Recipes() {
                       <Button 
                         onClick={() => navigate('/brew-timer', { state: { recipeId: recipe.id } })}
                         size="sm"
-                        className="self-start"
+                        variant="outline"
+                        className="mt-2"
                       >
                         <Timer className="h-4 w-4 mr-2" />
                         Timer
                       </Button>
+                      <ShareButton
+                        title={`Coffee Recipe: ${recipe.name}`}
+                        text={generateRecipeShareText(
+                          recipe,
+                          getGrinderName(recipe.grinderId),
+                          getBrewerName(recipe.brewerId)
+                        )}
+                        size="sm"
+                        variant="outline"
+                      />
                     </div>
                     <div className="flex gap-2">
                       <Button 

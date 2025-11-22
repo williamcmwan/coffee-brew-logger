@@ -429,12 +429,6 @@ export default function Brew() {
                     </div>
                   </div>
                 )}
-
-                <ImageUpload
-                  value={photo}
-                  onChange={setPhoto}
-                  label="Brew Photo (optional)"
-                />
               </div>
             )}
 
@@ -595,6 +589,12 @@ export default function Brew() {
                     ))}
                   </div>
                 )}
+
+                <ImageUpload
+                  value={photo}
+                  onChange={setPhoto}
+                  label="Brew Photo (optional)"
+                />
               </div>
             )}
 
@@ -609,9 +609,15 @@ export default function Brew() {
                   Previous
                 </Button>
               )}
-              {step < 3 && (
+              {step === 1 && (
                 <Button onClick={handleNext} className="flex-1">
                   Next
+                </Button>
+              )}
+              {step === 2 && (
+                <Button onClick={handleNext} className="flex-1">
+                  <Clock className="mr-2 h-4 w-4" />
+                  Brew Timer
                 </Button>
               )}
               {step === 3 && (

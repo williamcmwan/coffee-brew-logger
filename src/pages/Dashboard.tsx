@@ -45,7 +45,7 @@ export default function Dashboard() {
         </Card>
 
         <Card>
-          <CardHeader>
+          <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <CardTitle className="text-lg">Recent Brews</CardTitle>
               <Button 
@@ -59,7 +59,7 @@ export default function Dashboard() {
               </Button>
             </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pt-0">
             {recentBrews.length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-8">
                 No brews yet. Start your first brew session!

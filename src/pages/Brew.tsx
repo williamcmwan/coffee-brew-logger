@@ -609,15 +609,19 @@ export default function Brew() {
                   Previous
                 </Button>
               )}
-              {step === 1 && (
-                <Button onClick={handleNext} className="flex-1">
-                  Next
-                </Button>
-              )}
               {step === 2 && (
-                <Button onClick={handleNext} className="flex-1">
+                <Button 
+                  variant="outline"
+                  onClick={handleNext} 
+                  className="flex-1"
+                >
                   <Clock className="mr-2 h-4 w-4" />
                   Brew Timer
+                </Button>
+              )}
+              {step < 3 && (
+                <Button onClick={step === 2 ? () => setStep(3) : handleNext} className="flex-1">
+                  Next
                 </Button>
               )}
               {step === 3 && (

@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Trash2 } from "lucide-react";
 import type { CoffeeBean, CoffeeBatch } from "@/contexts/AppContext";
+import ImageUpload from "@/components/ImageUpload";
 
 const coffeeBeanSchema = z.object({
   name: z.string().trim().min(1, "Name is required").max(100),
@@ -23,7 +24,7 @@ const coffeeBeanSchema = z.object({
   roastLevel: z.string().trim().min(1, "Roast level is required").max(50),
   tastingNotes: z.string().trim().max(500).optional().or(z.literal("")),
   url: z.string().trim().url("Must be a valid URL").optional().or(z.literal("")),
-  photo: z.string().trim().url("Must be a valid URL").optional().or(z.literal("")),
+  photo: z.string().optional().or(z.literal("")),
 });
 
 type CoffeeBeanFormData = z.infer<typeof coffeeBeanSchema>;
@@ -42,6 +43,8 @@ export function CoffeeBeanDialog({ open, onOpenChange, bean }: CoffeeBeanDialogP
   const {
     register,
     handleSubmit,
+    setValue,
+    watch,
     reset,
     formState: { errors },
   } = useForm<CoffeeBeanFormData>({
@@ -61,27 +64,27 @@ export function CoffeeBeanDialog({ open, onOpenChange, bean }: CoffeeBeanDialogP
     },
   });
 
+  const photo = watch("photo");
+
   useEffect(() => {
     if (bean) {
-      reset({
-        name: bean.name,
-        roaster: bean.roaster,
-        country: bean.country,
-        region: bean.region || "",
-        altitude: bean.altitude || "",
-        varietal: bean.varietal,
-        process: bean.process,
-        roastLevel: bean.roastLevel,
-        tastingNotes: bean.tastingNotes || "",
-        url: bean.url || "",
-        photo: bean.photo || "",
-      });
+      setValue("name", bean.name);
+      setValue("roaster", bean.roaster);
+      setValue("country", bean.country);
+      setValue("region", bean.region || "");
+      setValue("altitude", bean.altitude || "");
+      setValue("varietal", bean.varietal);
+      setValue("process", bean.process);
+      setValue("roastLevel", bean.roastLevel);
+      setValue("tastingNotes", bean.tastingNotes || "");
+      setValue("url", bean.url || "");
+      setValue("photo", bean.photo || "");
       setBatches(bean.batches || []);
     } else {
       reset();
       setBatches([]);
     }
-  }, [bean, reset]);
+  }, [bean, setValue, reset]);
 
   const addBatch = () => {
     setBatches([
@@ -194,9 +197,11 @@ export function CoffeeBeanDialog({ open, onOpenChange, bean }: CoffeeBeanDialogP
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="photo">Photo URL</Label>
-            <Input id="photo" {...register("photo")} placeholder="https://example.com/image.jpg" />
-            {errors.photo && <p className="text-sm text-destructive">{errors.photo.message}</p>}
+            <ImageUpload
+              value={photo || ""}
+              onChange={(dataUrl) => setValue("photo", dataUrl)}
+              label="Photo"
+            />
           </div>
 
           <div className="space-y-2">

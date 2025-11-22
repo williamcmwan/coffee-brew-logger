@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { ArrowLeft, Coffee, Droplets, Thermometer, Clock, Scale, Star } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import ImageUpload from "@/components/ImageUpload";
 
 export default function Brew() {
   const navigate = useNavigate();
@@ -384,15 +385,11 @@ export default function Brew() {
                   </div>
                 </div>
 
-                <div>
-                  <Label htmlFor="photo">Photo URL (optional)</Label>
-                  <Input
-                    id="photo"
-                    value={photo}
-                    onChange={(e) => setPhoto(e.target.value)}
-                    placeholder="Enter photo URL"
-                  />
-                </div>
+                <ImageUpload
+                  value={photo}
+                  onChange={setPhoto}
+                  label="Brew Photo (optional)"
+                />
               </div>
             )}
 

@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import type { Recipe } from "@/contexts/AppContext";
+import ImageUpload from "@/components/ImageUpload";
 
 const recipeSchema = z.object({
   name: z.string().trim().min(1, "Name is required").max(100),
@@ -17,7 +18,7 @@ const recipeSchema = z.object({
   brewerId: z.string().min(1, "Brewer is required"),
   ratio: z.string().trim().min(1, "Ratio is required").max(20),
   dose: z.number().min(1, "Dose must be at least 1g").max(1000),
-  photo: z.string().trim().url("Must be a valid URL").optional().or(z.literal("")),
+  photo: z.string().optional().or(z.literal("")),
   process: z.string().trim().min(1, "Process is required").max(200),
   grindSize: z.number().min(0, "Grind size must be at least 0").max(100),
   water: z.number().min(1, "Water must be at least 1g").max(10000),
@@ -65,6 +66,7 @@ export function RecipeDialog({ open, onOpenChange, recipe }: RecipeDialogProps) 
 
   const grinderId = watch("grinderId");
   const brewerId = watch("brewerId");
+  const photo = watch("photo");
 
   useEffect(() => {
     if (recipe) {
@@ -246,9 +248,11 @@ export function RecipeDialog({ open, onOpenChange, recipe }: RecipeDialogProps) 
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="photo">Photo URL</Label>
-            <Input id="photo" {...register("photo")} placeholder="https://example.com/image.jpg" />
-            {errors.photo && <p className="text-sm text-destructive">{errors.photo.message}</p>}
+            <ImageUpload
+              value={photo || ""}
+              onChange={(dataUrl) => setValue("photo", dataUrl)}
+              label="Photo"
+            />
           </div>
 
           <div className="flex gap-2 pt-4">

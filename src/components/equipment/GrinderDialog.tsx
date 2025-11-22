@@ -10,10 +10,11 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import type { Grinder } from "@/contexts/AppContext";
+import ImageUpload from "@/components/ImageUpload";
 
 const grinderSchema = z.object({
   model: z.string().trim().min(1, "Model is required").max(100),
-  photo: z.string().trim().url("Must be a valid URL").optional().or(z.literal("")),
+  photo: z.string().optional().or(z.literal("")),
   burrType: z.enum(["conical", "flat"]),
   idealFor: z.enum(["pour-over", "espresso", "both"]),
 });
@@ -49,6 +50,7 @@ export function GrinderDialog({ open, onOpenChange, grinder }: GrinderDialogProp
 
   const burrType = watch("burrType");
   const idealFor = watch("idealFor");
+  const photo = watch("photo");
 
   useEffect(() => {
     if (grinder) {
@@ -87,9 +89,11 @@ export function GrinderDialog({ open, onOpenChange, grinder }: GrinderDialogProp
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="photo">Photo URL</Label>
-            <Input id="photo" {...register("photo")} placeholder="https://example.com/image.jpg" />
-            {errors.photo && <p className="text-sm text-destructive">{errors.photo.message}</p>}
+            <ImageUpload
+              value={photo || ""}
+              onChange={(dataUrl) => setValue("photo", dataUrl)}
+              label="Photo"
+            />
           </div>
 
           <div className="space-y-2">

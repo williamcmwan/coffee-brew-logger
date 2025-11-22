@@ -7,6 +7,7 @@ import { AppProvider, useApp } from "./contexts/AppContext";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Brew from "./pages/Brew";
+import BrewHistory from "./pages/BrewHistory";
 import Settings from "./pages/Settings";
 import Grinders from "./pages/Grinders";
 import Brewers from "./pages/Brewers";
@@ -84,6 +85,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <Brew />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/history"
+              element={
+                <ProtectedRoute>
+                  <BrewHistory />
                 </ProtectedRoute>
               }
             />

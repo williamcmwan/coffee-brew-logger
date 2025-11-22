@@ -1,13 +1,16 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useApp } from "@/contexts/AppContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
-import { GitCompare, Coffee, Star, Droplets, TrendingUp } from "lucide-react";
+import { GitCompare, Coffee, Star, Droplets, TrendingUp, ArrowLeft } from "lucide-react";
 
 const BrewComparison = () => {
+  const navigate = useNavigate();
   const { brews, coffeeBeans, grinders, brewers, recipes } = useApp();
   const [brew1Id, setBrew1Id] = useState<string>("");
   const [brew2Id, setBrew2Id] = useState<string>("");
@@ -170,7 +173,10 @@ const BrewComparison = () => {
   return (
     <div className="min-h-screen bg-background p-4 md:p-6">
       <div className="max-w-7xl mx-auto space-y-6">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" onClick={() => navigate("/dashboard")}>
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
           <GitCompare className="h-8 w-8" />
           <div>
             <h1 className="text-3xl font-bold">Compare Brews</h1>

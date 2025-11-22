@@ -40,37 +40,48 @@ export default function BrewTimerContent({ recipe, onClose, onComplete }: BrewTi
       description: `Heat water to ${recipe.temperature}°C. Prepare ${recipe.dose}g of coffee ground at setting ${recipe.grindSize}.`
     });
     
-    // Parse process steps or create default brewing steps
-    const brewTime = Number(recipe.brewTime) || 180;
-    const water = Number(recipe.water) || 0;
-    
-    if (recipe.process) {
-      const lines = recipe.process.split('\n').filter(line => line.trim());
-      lines.forEach((line, index) => {
+    // Use structured process steps if available
+    if (recipe.processSteps && recipe.processSteps.length > 0) {
+      recipe.processSteps.forEach((step, index) => {
         parsedSteps.push({
-          title: `Step ${index + 1}`,
-          duration: Math.floor(brewTime / lines.length),
-          description: line.trim()
+          title: step.description || `Step ${index + 1}`,
+          duration: step.duration,
+          description: `Pour ${step.waterAmount}g of water.`
         });
       });
     } else {
-      // Default brewing steps based on brew time
-      const stepDuration = Math.floor(brewTime / 3);
-      parsedSteps.push({
-        title: "Bloom",
-        duration: stepDuration,
-        description: `Pour ${Math.floor(water * 0.3)}ml of water and let bloom.`
-      });
-      parsedSteps.push({
-        title: "Main Pour",
-        duration: stepDuration,
-        description: `Pour remaining water in circular motions to reach ${recipe.water}ml total.`
-      });
-      parsedSteps.push({
-        title: "Drawdown",
-        duration: stepDuration,
-        description: `Wait for complete drawdown. Target yield: ${recipe.yield}ml.`
-      });
+      // Fallback to old process parsing or default steps
+      const brewTime = Number(recipe.brewTime) || 180;
+      const water = Number(recipe.water) || 0;
+      
+      if (recipe.process) {
+        const lines = recipe.process.split('\n').filter(line => line.trim());
+        lines.forEach((line, index) => {
+          parsedSteps.push({
+            title: `Step ${index + 1}`,
+            duration: Math.floor(brewTime / lines.length),
+            description: line.trim()
+          });
+        });
+      } else {
+        // Default brewing steps based on brew time
+        const stepDuration = Math.floor(brewTime / 3);
+        parsedSteps.push({
+          title: "Bloom",
+          duration: stepDuration,
+          description: `Pour ${Math.floor(water * 0.3)}ml of water and let bloom.`
+        });
+        parsedSteps.push({
+          title: "Main Pour",
+          duration: stepDuration,
+          description: `Pour remaining water in circular motions to reach ${recipe.water}ml total.`
+        });
+        parsedSteps.push({
+          title: "Drawdown",
+          duration: stepDuration,
+          description: `Wait for complete drawdown. Target yield: ${recipe.yield}ml.`
+        });
+      }
     }
     
     // Add final step

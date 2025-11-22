@@ -413,7 +413,23 @@ export default function Brew() {
                   </div>
                 </div>
 
-                {selectedRecipe?.process && (
+                {selectedRecipe?.processSteps && selectedRecipe.processSteps.length > 0 && (
+                  <div className="space-y-2">
+                    <Label>Process Steps</Label>
+                    <div className="space-y-2">
+                      {selectedRecipe.processSteps.map((step, index) => (
+                        <div key={index} className="p-2 rounded-md bg-muted/50 text-sm">
+                          <div className="font-medium">{step.description}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {step.waterAmount}g water for {step.duration}s
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
+                {selectedRecipe?.process && !selectedRecipe.processSteps && (
                   <div className="space-y-2">
                     <Label>Process</Label>
                     <div className="p-3 rounded-md bg-muted/50 text-sm">

@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -9,7 +9,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import type { Recipe } from "@/contexts/AppContext";
+import { Plus, X } from "lucide-react";
+import type { Recipe, RecipeStep } from "@/contexts/AppContext";
 import ImageUpload from "@/components/ImageUpload";
 
 const recipeSchema = z.object({
@@ -19,7 +20,7 @@ const recipeSchema = z.object({
   ratio: z.string().trim().min(1, "Ratio is required").max(20),
   dose: z.number().min(1, "Dose must be at least 1g").max(1000),
   photo: z.string().optional().or(z.literal("")),
-  process: z.string().trim().min(1, "Process is required").max(200),
+  process: z.string().trim().optional().or(z.literal("")),
   grindSize: z.number().min(0, "Grind size must be at least 0").max(100),
   water: z.number().min(1, "Water must be at least 1g").max(10000),
   yield: z.number().min(1, "Yield must be at least 1g").max(10000),
@@ -38,6 +39,9 @@ interface RecipeDialogProps {
 export function RecipeDialog({ open, onOpenChange, recipe }: RecipeDialogProps) {
   const { addRecipe, updateRecipe, grinders, brewers } = useApp();
   const { toast } = useToast();
+  const [processSteps, setProcessSteps] = useState<RecipeStep[]>([
+    { description: "", waterAmount: 0, duration: 30 }
+  ]);
 
   const {
     register,
@@ -73,8 +77,12 @@ export function RecipeDialog({ open, onOpenChange, recipe }: RecipeDialogProps) 
       Object.entries(recipe).forEach(([key, value]) => {
         setValue(key as any, value);
       });
+      if (recipe.processSteps && recipe.processSteps.length > 0) {
+        setProcessSteps(recipe.processSteps);
+      }
     } else {
       reset();
+      setProcessSteps([{ description: "", waterAmount: 0, duration: 30 }]);
     }
   }, [recipe, setValue, reset]);
 
@@ -88,15 +96,36 @@ export function RecipeDialog({ open, onOpenChange, recipe }: RecipeDialogProps) 
       return;
     }
 
+    const recipeData = {
+      ...data,
+      processSteps: processSteps.filter(step => step.description.trim() !== "")
+    };
+
     if (recipe) {
-      updateRecipe(recipe.id, data);
+      updateRecipe(recipe.id, recipeData);
       toast({ title: "Recipe updated", description: "Recipe has been updated successfully" });
     } else {
-      addRecipe(data as Omit<Recipe, "id">);
+      addRecipe(recipeData as Omit<Recipe, "id">);
       toast({ title: "Recipe added", description: "Recipe has been added successfully" });
     }
     onOpenChange(false);
     reset();
+  };
+
+  const addStep = () => {
+    setProcessSteps([...processSteps, { description: "", waterAmount: 0, duration: 30 }]);
+  };
+
+  const removeStep = (index: number) => {
+    if (processSteps.length > 1) {
+      setProcessSteps(processSteps.filter((_, i) => i !== index));
+    }
+  };
+
+  const updateStep = (index: number, field: keyof RecipeStep, value: string | number) => {
+    const newSteps = [...processSteps];
+    newSteps[index] = { ...newSteps[index], [field]: value };
+    setProcessSteps(newSteps);
   };
 
   if (grinders.length === 0 || brewers.length === 0) {
@@ -188,9 +217,61 @@ export function RecipeDialog({ open, onOpenChange, recipe }: RecipeDialogProps) 
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="process">Process *</Label>
-            <Input id="process" {...register("process")} placeholder="e.g., Standard pour" />
-            {errors.process && <p className="text-sm text-destructive">{errors.process.message}</p>}
+            <Label>Process Steps *</Label>
+            <div className="space-y-3">
+              {processSteps.map((step, index) => (
+                <div key={index} className="p-3 border rounded-lg space-y-2 bg-muted/30">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">Step {index + 1}</span>
+                    {processSteps.length > 1 && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeStep(index)}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                  <Input
+                    placeholder="Description (e.g., Bloom, Main pour)"
+                    value={step.description}
+                    onChange={(e) => updateStep(index, "description", e.target.value)}
+                  />
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <Label className="text-xs">Water (g)</Label>
+                      <Input
+                        type="number"
+                        placeholder="0"
+                        value={step.waterAmount || ""}
+                        onChange={(e) => updateStep(index, "waterAmount", parseFloat(e.target.value) || 0)}
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs">Duration (s)</Label>
+                      <Input
+                        type="number"
+                        placeholder="30"
+                        value={step.duration || ""}
+                        onChange={(e) => updateStep(index, "duration", parseInt(e.target.value) || 0)}
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={addStep}
+                className="w-full"
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                Add Step
+              </Button>
+            </div>
           </div>
 
           <div className="grid grid-cols-3 gap-4">

@@ -39,6 +39,12 @@ export interface Brewer {
   type: "espresso" | "pour-over";
 }
 
+export interface RecipeStep {
+  description: string;
+  waterAmount: number; // in grams
+  duration: number; // in seconds
+}
+
 export interface Recipe {
   id: string;
   name: string;
@@ -47,7 +53,8 @@ export interface Recipe {
   ratio: string;
   dose: number;
   photo?: string;
-  process: string;
+  process: string; // Keep for backward compatibility
+  processSteps?: RecipeStep[]; // New structured steps
   grindSize: number;
   water: number;
   yield: number;

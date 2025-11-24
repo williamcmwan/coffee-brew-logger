@@ -64,7 +64,7 @@ export default function BrewTimerContent({ recipe, onClose, onComplete }: BrewTi
         parsedSteps.push({
           title: step.description || `Step ${index + 1}`,
           duration: stepDuration,
-          description: `Pour ${step.waterAmount}g of water at ${formatElapsed(step.duration)}.`
+          description: `Pour ${step.waterAmount}g of water.`
         });
         previousElapsed = step.duration;
       });

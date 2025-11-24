@@ -308,35 +308,45 @@ export default function BrewTimerContent({ recipe, onClose, onComplete }: BrewTi
         {/* Step List */}
         <div className="border-t pt-4 space-y-2">
           <h4 className="font-semibold text-sm text-muted-foreground mb-3">All Steps</h4>
-          {steps.map((step, index) => (
-            <div
-              key={index}
-              className={`flex items-start gap-3 p-3 rounded-lg transition-colors ${
-                index === currentStepIndex
-                  ? 'bg-primary/10 border border-primary/20'
-                  : index < currentStepIndex
-                  ? 'bg-muted/50 opacity-60'
-                  : 'bg-muted/20'
-              }`}
-            >
-              <div className={`flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold ${
-                index < currentStepIndex ? 'bg-primary text-primary-foreground' :
-                index === currentStepIndex ? 'bg-primary text-primary-foreground' :
-                'bg-muted text-muted-foreground'
-              }`}>
-                {index < currentStepIndex ? '✓' : index + 1}
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="font-medium text-sm">{step.title}</div>
-                <div className="text-xs text-muted-foreground">{step.description}</div>
-              </div>
-              {step.duration > 0 && (
-                <div className="text-xs text-muted-foreground whitespace-nowrap">
-                  {formatTime(step.duration)}
+          {steps.map((step, index) => {
+            // Calculate elapsed time at the end of this step
+            const elapsedTime = steps.slice(0, index + 1).reduce((sum, s) => sum + s.duration, 0);
+            
+            return (
+              <div
+                key={index}
+                className={`flex items-start gap-3 p-3 rounded-lg transition-colors ${
+                  index === currentStepIndex
+                    ? 'bg-primary/10 border border-primary/20'
+                    : index < currentStepIndex
+                    ? 'bg-muted/50 opacity-60'
+                    : 'bg-muted/20'
+                }`}
+              >
+                <div className={`flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold ${
+                  index < currentStepIndex ? 'bg-primary text-primary-foreground' :
+                  index === currentStepIndex ? 'bg-primary text-primary-foreground' :
+                  'bg-muted text-muted-foreground'
+                }`}>
+                  {index < currentStepIndex ? '✓' : index + 1}
                 </div>
-              )}
-            </div>
-          ))}
+                <div className="flex-1 min-w-0">
+                  <div className="font-medium text-sm">{step.title}</div>
+                  <div className="text-xs text-muted-foreground">{step.description}</div>
+                </div>
+                {step.duration > 0 && (
+                  <div className="text-xs text-muted-foreground whitespace-nowrap">
+                    until {formatTime(elapsedTime)}
+                  </div>
+                )}
+                {step.duration === 0 && index > 0 && (
+                  <div className="text-xs text-muted-foreground whitespace-nowrap">
+                    {formatTime(0)}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
 
         {/* Close Button */}

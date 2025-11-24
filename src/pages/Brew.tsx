@@ -418,10 +418,14 @@ export default function Brew() {
                     <Label>Process Steps</Label>
                     <div className="space-y-2">
                       {selectedRecipe.processSteps.map((step, index) => (
-                        <div key={index} className="p-2 rounded-md bg-muted/50 text-sm">
+                     <div className="p-2 rounded-md bg-muted/50 text-sm">
                           <div className="font-medium">{step.description}</div>
                           <div className="text-xs text-muted-foreground">
-                            {step.waterAmount}g water for {step.duration}s
+                            {step.waterAmount}g water at {
+                              step.duration >= 60
+                                ? `${Math.floor(step.duration / 60)}:${(step.duration % 60).toString().padStart(2, '0')}`
+                                : `0:${step.duration.toString().padStart(2, '0')}`
+                            } elapsed
                           </div>
                         </div>
                       ))}

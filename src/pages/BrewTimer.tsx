@@ -11,6 +11,7 @@ interface TimerStep {
   title: string;
   duration: number; // in seconds
   description: string;
+  waterAmount?: number;
 }
 
 export default function BrewTimer() {
@@ -66,7 +67,8 @@ export default function BrewTimer() {
         parsedSteps.push({
           title: step.description || `Step ${index + 1}`,
           duration: stepDuration,
-          description: `Pour ${step.waterAmount}g of water.`
+          description: `Pour ${step.waterAmount}g of water.`,
+          waterAmount: step.waterAmount
         });
         previousElapsed = step.duration;
       });
@@ -281,9 +283,37 @@ export default function BrewTimer() {
             </div>
             
             {currentStep && currentStep.duration > 0 && (
-              <div className="text-6xl font-bold tabular-nums">
-                {formatTime(timeRemaining)}
-              </div>
+              <>
+                <div className="text-6xl font-bold tabular-nums">
+                  {formatTime(timeRemaining)}
+                </div>
+                {currentStep.waterAmount && currentStep.waterAmount > 100 && (
+                  <div className="flex gap-6 justify-center text-sm text-muted-foreground mt-4">
+                    <div className="flex flex-col items-center">
+                      <span className="text-xs uppercase tracking-wide">Flow Rate</span>
+                      <span className="text-lg font-semibold text-foreground">
+                        {(currentStep.waterAmount / currentStep.duration).toFixed(1)} g/s
+                      </span>
+                    </div>
+                    <div className="flex flex-col items-center">
+                      <span className="text-xs uppercase tracking-wide">Total Water</span>
+                      <span className="text-lg font-semibold text-foreground">
+                        {(() => {
+                          // Calculate cumulative water up to previous steps
+                          const previousWater = steps.slice(0, currentStepIndex).reduce((sum, s) => 
+                            sum + (s.waterAmount || 0), 0
+                          );
+                          // Calculate current step progress
+                          const stepElapsed = currentStep.duration - timeRemaining;
+                          const flowRate = currentStep.waterAmount / currentStep.duration;
+                          const currentStepWater = Math.min(stepElapsed * flowRate, currentStep.waterAmount);
+                          return Math.round(previousWater + currentStepWater);
+                        })()}g
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </>
             )}
           </div>
 

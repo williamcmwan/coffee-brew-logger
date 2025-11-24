@@ -325,17 +325,17 @@ export default function BrewTimerContent({ recipe, onClose, onComplete }: BrewTi
           )}
           
           {isComplete && (
-            <div className="text-center space-y-4 w-full">
-              <div className="text-xl text-primary font-semibold">
+            <div className="text-center space-y-3 w-full">
+              <div className="text-lg text-primary font-semibold">
                 ✨ Brewing Complete!
               </div>
               <div className="flex gap-2">
-                <Button onClick={handleReset} size="lg" variant="outline" className="flex-1">
-                  <RotateCcw className="mr-2 h-5 w-5" />
+                <Button onClick={handleReset} variant="outline" className="flex-1">
+                  <RotateCcw className="mr-1 h-4 w-4" />
                   Brew Again
                 </Button>
-                <Button onClick={onComplete} size="lg" className="flex-1">
-                  Continue to Log Brew
+                <Button onClick={onComplete} className="flex-1">
+                  Log Brew
                 </Button>
               </div>
             </div>

@@ -254,11 +254,19 @@ export function RecipeDialog({ open, onOpenChange, recipe }: RecipeDialogProps) 
                           const cumulativeValue = parseFloat(e.target.value) || 0;
                           // Calculate water for previous steps
                           const previousWater = processSteps.slice(0, index).reduce((sum, s) => sum + (s.waterAmount || 0), 0);
-                          // Set this step's water amount
-                          const stepWater = Math.max(0, cumulativeValue - previousWater);
+                          // Set this step's water amount (allow negative, user will see warning)
+                          const stepWater = cumulativeValue - previousWater;
                           updateStep(index, "waterAmount", stepWater);
                         }}
                       />
+                      {(() => {
+                        const cumulativeWater = processSteps.slice(0, index + 1).reduce((sum, s) => sum + (s.waterAmount || 0), 0);
+                        const previousWater = processSteps.slice(0, index).reduce((sum, s) => sum + (s.waterAmount || 0), 0);
+                        if (index > 0 && cumulativeWater < previousWater) {
+                          return <p className="text-xs text-destructive mt-1">Water should be ≥ {previousWater}g</p>;
+                        }
+                        return null;
+                      })()}
                     </div>
                     <div>
                       <Label className="text-xs">Elapsed Time (s)</Label>

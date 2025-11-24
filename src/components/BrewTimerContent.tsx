@@ -186,6 +186,11 @@ export default function BrewTimerContent({ recipe, onClose, onComplete }: BrewTi
   }, [isRunning, timeRemaining, currentStepIndex, steps, playNotificationSound]);
 
   const handleStart = () => {
+    // Skip preparation step if at index 0
+    if (currentStepIndex === 0 && steps.length > 1) {
+      setCurrentStepIndex(1);
+      setTimeRemaining(steps[1].duration);
+    }
     setIsRunning(true);
     playNotificationSound();
   };

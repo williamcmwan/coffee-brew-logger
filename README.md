@@ -81,7 +81,7 @@ The client dev server runs on port 5173 and proxies API requests to the server o
 - **Brew History**: View, edit, and delete past brews with filtering and sorting
 - **Analytics**: View brewing statistics and trends
 - **Brew Comparison**: Compare multiple brews side by side
-- **Brew Timer**: Timer with recipe steps for guided brewing
+- **Brew Timer**: Timer with recipe steps, countdown sounds, flow rate display, and water tracking
 - **Custom Templates**: Create custom brew note templates for consistent observations
 - **Inventory Management**: Track coffee stock with low stock alerts
 - **Export**: Export brew history to CSV or PDF

@@ -138,8 +138,8 @@ export default function BrewTimerContent({
     setTimeRemaining(parsedSteps[0]?.duration || 0);
   }, [recipe]);
 
-  // Play notification sound
-  const playNotificationSound = useCallback(() => {
+  // Play tick sound for countdown (short click)
+  const playTickSound = useCallback(() => {
     const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
     const oscillator = audioContext.createOscillator();
     const gainNode = audioContext.createGain();
@@ -147,15 +147,39 @@ export default function BrewTimerContent({
     oscillator.connect(gainNode);
     gainNode.connect(audioContext.destination);
     
-    oscillator.frequency.value = 800;
-    oscillator.type = 'sine';
+    oscillator.frequency.value = 1200;
+    oscillator.type = 'square';
     
-    gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+    gainNode.gain.setValueAtTime(0.2, audioContext.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.08);
     
     oscillator.start(audioContext.currentTime);
-    oscillator.stop(audioContext.currentTime + 0.5);
+    oscillator.stop(audioContext.currentTime + 0.08);
   }, []);
+
+  // Play bell sound at end of step (light chime)
+  const playBellSound = useCallback(() => {
+    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const oscillator = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
+    
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+    
+    oscillator.frequency.value = 880;
+    oscillator.type = 'sine';
+    
+    gainNode.gain.setValueAtTime(0.4, audioContext.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.8);
+    
+    oscillator.start(audioContext.currentTime);
+    oscillator.stop(audioContext.currentTime + 0.8);
+  }, []);
+
+  // Play notification sound (legacy, now uses bell)
+  const playNotificationSound = useCallback(() => {
+    playBellSound();
+  }, [playBellSound]);
 
   // Timer countdown logic
   useEffect(() => {
@@ -163,9 +187,14 @@ export default function BrewTimerContent({
     
     const interval = setInterval(() => {
       setTimeRemaining(prev => {
+        // Play tick sound in last 5 seconds (but not at 0)
+        if (prev <= 6 && prev > 1) {
+          playTickSound();
+        }
+        
         if (prev <= 1) {
-          // Step completed
-          playNotificationSound();
+          // Step completed - play bell
+          playBellSound();
           
           if (currentStepIndex < steps.length - 1) {
             const nextIndex = currentStepIndex + 1;
@@ -196,7 +225,7 @@ export default function BrewTimerContent({
     }, 1000);
     
     return () => clearInterval(interval);
-  }, [isRunning, timeRemaining, currentStepIndex, steps, playNotificationSound]);
+  }, [isRunning, timeRemaining, currentStepIndex, steps, playTickSound, playBellSound]);
 
   const handleStart = () => {
     // Skip preparation step if at index 0
@@ -280,20 +309,20 @@ export default function BrewTimerContent({
           
           {currentStep && currentStep.duration > 0 && (
             <>
-              <div className="text-7xl font-bold tabular-nums text-center">
+              <div className={`font-bold tabular-nums text-center ${timeRemaining <= 5 ? 'text-orange-500' : ''}`} style={{ fontSize: '6rem', lineHeight: 1 }}>
                 {formatTime(timeRemaining)}
               </div>
               {currentStep.waterAmount && currentStep.waterAmount > 0 && (
-                <div className="flex gap-8 justify-center text-muted-foreground mt-2">
+                <div className="flex gap-8 justify-center text-muted-foreground mt-4">
                   <div className="flex flex-col items-center">
                     <span className="text-sm uppercase tracking-wide">Flow Rate</span>
-                    <span className="text-2xl font-semibold text-foreground">
-                      {(currentStep.waterAmount / currentStep.duration).toFixed(1)} g/s
+                    <span className="text-4xl font-bold text-foreground">
+                      {(currentStep.waterAmount / currentStep.duration).toFixed(1)} <span className="text-2xl">g/s</span>
                     </span>
                   </div>
                   <div className="flex flex-col items-center">
                     <span className="text-sm uppercase tracking-wide">Total Water</span>
-                    <span className="text-2xl font-semibold text-foreground">
+                    <span className="text-4xl font-bold text-foreground">
                       {(() => {
                         // Calculate cumulative water up to previous steps
                         const previousWater = steps.slice(0, currentStepIndex).reduce((sum, s) => 
@@ -304,7 +333,14 @@ export default function BrewTimerContent({
                         const flowRate = currentStep.waterAmount / currentStep.duration;
                         const currentStepWater = Math.min(stepElapsed * flowRate, currentStep.waterAmount);
                         return Math.round(previousWater + currentStepWater);
-                      })()}g
+                      })()}
+                      <span className="text-2xl text-muted-foreground">/{(() => {
+                        // Calculate target water at end of this step
+                        const targetWater = steps.slice(0, currentStepIndex + 1).reduce((sum, s) => 
+                          sum + (s.waterAmount || 0), 0
+                        );
+                        return targetWater;
+                      })()}g</span>
                     </span>
                   </div>
                 </div>
@@ -354,8 +390,8 @@ export default function BrewTimerContent({
         </div>
 
         {/* Timeline */}
-        <div className="border-t pt-3">
-          <h4 className="font-semibold text-xs text-muted-foreground mb-3">Timeline</h4>
+        <div className="border-t pt-2">
+          <h4 className="font-semibold text-xs text-muted-foreground mb-2">Timeline</h4>
           <div className="relative">
             {steps.map((step, index) => {
               // Calculate elapsed time at the start of this step
@@ -363,7 +399,7 @@ export default function BrewTimerContent({
               const isLast = index === steps.length - 1;
               
               return (
-                <div key={index} className="flex gap-3">
+                <div key={index} className="flex gap-2">
                   {/* Timeline column */}
                   <div className="flex flex-col items-center">
                     {/* Time marker */}
@@ -373,26 +409,26 @@ export default function BrewTimerContent({
                       {formatTime(stepStartTime)}
                     </div>
                     {/* Dot */}
-                    <div className={`w-3 h-3 rounded-full mt-1 ${
+                    <div className={`w-2.5 h-2.5 rounded-full mt-0.5 ${
                       index < currentStepIndex ? 'bg-primary' :
-                      index === currentStepIndex ? 'bg-primary ring-4 ring-primary/20' :
+                      index === currentStepIndex ? 'bg-primary ring-2 ring-primary/20' :
                       'bg-muted-foreground/30'
                     }`} />
                     {/* Line */}
                     {!isLast && (
-                      <div className={`w-0.5 flex-1 min-h-8 ${
+                      <div className={`w-0.5 flex-1 min-h-5 ${
                         index < currentStepIndex ? 'bg-primary' : 'bg-muted-foreground/20'
                       }`} />
                     )}
                   </div>
                   {/* Content */}
-                  <div className={`flex-1 pb-4 ${index < currentStepIndex ? 'opacity-60' : ''}`}>
-                    <div className={`font-medium text-sm ${
+                  <div className={`flex-1 pb-2 ${index < currentStepIndex ? 'opacity-60' : ''}`}>
+                    <div className={`font-medium text-sm leading-tight ${
                       index === currentStepIndex ? 'text-primary' : ''
                     }`}>
                       {step.title}
                     </div>
-                    <div className="text-xs text-muted-foreground mt-0.5">
+                    <div className="text-xs text-muted-foreground leading-tight">
                       {step.description}
                     </div>
                   </div>

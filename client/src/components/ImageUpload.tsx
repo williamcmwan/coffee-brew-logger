@@ -2,7 +2,7 @@ import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Camera, Upload, X } from "lucide-react";
-import { compressImage, validateImageFile } from "@/lib/imageUtils";
+import { uploadImage, deleteImage, validateImageFile } from "@/lib/imageUtils";
 import { toast } from "@/hooks/use-toast";
 
 interface ImageUploadProps {
@@ -35,9 +35,9 @@ export default function ImageUpload({ value, onChange, label = "Photo", classNam
 
     setIsLoading(true);
     try {
-      const compressed = await compressImage(file);
-      setPreview(compressed);
-      onChange(compressed);
+      const url = await uploadImage(file);
+      setPreview(url);
+      onChange(url);
       toast({
         title: "Image uploaded",
         description: "Your image has been successfully uploaded.",
@@ -45,7 +45,7 @@ export default function ImageUpload({ value, onChange, label = "Photo", classNam
     } catch (error) {
       toast({
         title: "Upload failed",
-        description: "Failed to process image. Please try again.",
+        description: "Failed to upload image. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -53,7 +53,15 @@ export default function ImageUpload({ value, onChange, label = "Photo", classNam
     }
   };
 
-  const handleRemove = () => {
+  const handleRemove = async () => {
+    // Delete from server if it's an uploaded file
+    if (preview && preview.startsWith('/uploads/')) {
+      try {
+        await deleteImage(preview);
+      } catch (e) {
+        // Ignore delete errors
+      }
+    }
     setPreview("");
     onChange("");
     if (fileInputRef.current) fileInputRef.current.value = "";
@@ -79,9 +87,9 @@ export default function ImageUpload({ value, onChange, label = "Photo", classNam
 
     setIsLoading(true);
     try {
-      const compressed = await compressImage(file);
-      setPreview(compressed);
-      onChange(compressed);
+      const url = await uploadImage(file);
+      setPreview(url);
+      onChange(url);
       toast({
         title: "Image uploaded",
         description: "Your image has been successfully uploaded.",
@@ -89,7 +97,7 @@ export default function ImageUpload({ value, onChange, label = "Photo", classNam
     } catch (error) {
       toast({
         title: "Upload failed",
-        description: "Failed to process image. Please try again.",
+        description: "Failed to upload image. Please try again.",
         variant: "destructive",
       });
     } finally {

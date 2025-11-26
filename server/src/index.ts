@@ -11,6 +11,7 @@ import recipesRoutes from './routes/recipes.js';
 import coffeeBeansRoutes from './routes/coffeeBeans.js';
 import brewsRoutes from './routes/brews.js';
 import brewTemplatesRoutes from './routes/brewTemplates.js';
+import uploadsRoutes from './routes/uploads.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = process.env.PORT || 3003;
@@ -19,6 +20,12 @@ const PORT = process.env.PORT || 3003;
 const dataDir = path.join(__dirname, '../data');
 if (!fs.existsSync(dataDir)) {
   fs.mkdirSync(dataDir, { recursive: true });
+}
+
+// Ensure uploads directory exists
+const uploadsDir = path.join(dataDir, 'uploads');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
 }
 
 // Initialize database
@@ -37,6 +44,10 @@ app.use('/api/recipes', recipesRoutes);
 app.use('/api/coffee-beans', coffeeBeansRoutes);
 app.use('/api/brews', brewsRoutes);
 app.use('/api/brew-templates', brewTemplatesRoutes);
+app.use('/api/uploads', uploadsRoutes);
+
+// Serve uploaded images
+app.use('/uploads', express.static(uploadsDir));
 
 // Serve static files from client build
 const clientDistPath = path.join(__dirname, '../../client/dist');

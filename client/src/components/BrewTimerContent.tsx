@@ -15,11 +15,21 @@ interface TimerStep {
 
 interface BrewTimerContentProps {
   recipe: any;
-  onClose: () => void;
+  onClose?: () => void;
   onComplete: () => void;
+  completeButtonText?: string;
+  showCloseButton?: boolean;
+  showBorder?: boolean;
 }
 
-export default function BrewTimerContent({ recipe, onClose, onComplete }: BrewTimerContentProps) {
+export default function BrewTimerContent({ 
+  recipe, 
+  onClose, 
+  onComplete,
+  completeButtonText = "Log Brew",
+  showCloseButton = true,
+  showBorder = false
+}: BrewTimerContentProps) {
   const { grinders, brewers } = useApp();
   
   const [steps, setSteps] = useState<TimerStep[]>([]);
@@ -233,7 +243,7 @@ export default function BrewTimerContent({ recipe, onClose, onComplete }: BrewTi
   };
 
   return (
-    <Card className="border-0">
+    <Card className={showBorder ? "" : "border-0"}>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Coffee className="h-5 w-5" />
@@ -335,7 +345,7 @@ export default function BrewTimerContent({ recipe, onClose, onComplete }: BrewTi
                   Brew Again
                 </Button>
                 <Button onClick={onComplete} className="flex-1">
-                  Log Brew
+                  {completeButtonText}
                 </Button>
               </div>
             </div>
@@ -382,14 +392,16 @@ export default function BrewTimerContent({ recipe, onClose, onComplete }: BrewTi
         </div>
 
         {/* Close Button */}
-        <Button 
-          onClick={onClose} 
-          variant="outline" 
-          className="w-full"
-        >
-          <X className="mr-2 h-4 w-4" />
-          Close Timer
-        </Button>
+        {showCloseButton && onClose && (
+          <Button 
+            onClick={onClose} 
+            variant="outline" 
+            className="w-full"
+          >
+            <X className="mr-2 h-4 w-4" />
+            Close Timer
+          </Button>
+        )}
       </CardContent>
     </Card>
   );

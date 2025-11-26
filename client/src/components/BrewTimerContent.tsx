@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useApp } from "@/contexts/AppContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -37,6 +37,21 @@ export default function BrewTimerContent({
   const [timeRemaining, setTimeRemaining] = useState(0);
   const [isRunning, setIsRunning] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
+  
+  // Persistent AudioContext for mobile browser support
+  const audioContextRef = useRef<AudioContext | null>(null);
+  
+  // Initialize and unlock AudioContext on user interaction
+  const getAudioContext = useCallback(() => {
+    if (!audioContextRef.current) {
+      audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+    }
+    // Resume if suspended (required for mobile browsers)
+    if (audioContextRef.current.state === 'suspended') {
+      audioContextRef.current.resume();
+    }
+    return audioContextRef.current;
+  }, []);
 
   // Parse recipe process into timed steps
   useEffect(() => {
@@ -140,41 +155,49 @@ export default function BrewTimerContent({
 
   // Play tick sound for countdown (short click)
   const playTickSound = useCallback(() => {
-    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-    const oscillator = audioContext.createOscillator();
-    const gainNode = audioContext.createGain();
-    
-    oscillator.connect(gainNode);
-    gainNode.connect(audioContext.destination);
-    
-    oscillator.frequency.value = 1200;
-    oscillator.type = 'square';
-    
-    gainNode.gain.setValueAtTime(0.2, audioContext.currentTime);
-    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.08);
-    
-    oscillator.start(audioContext.currentTime);
-    oscillator.stop(audioContext.currentTime + 0.08);
-  }, []);
+    try {
+      const audioContext = getAudioContext();
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+      
+      oscillator.frequency.value = 1200;
+      oscillator.type = 'square';
+      
+      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.08);
+      
+      oscillator.start(audioContext.currentTime);
+      oscillator.stop(audioContext.currentTime + 0.08);
+    } catch (e) {
+      console.warn('Audio playback failed:', e);
+    }
+  }, [getAudioContext]);
 
   // Play bell sound at end of step (light chime)
   const playBellSound = useCallback(() => {
-    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-    const oscillator = audioContext.createOscillator();
-    const gainNode = audioContext.createGain();
-    
-    oscillator.connect(gainNode);
-    gainNode.connect(audioContext.destination);
-    
-    oscillator.frequency.value = 880;
-    oscillator.type = 'sine';
-    
-    gainNode.gain.setValueAtTime(0.4, audioContext.currentTime);
-    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.8);
-    
-    oscillator.start(audioContext.currentTime);
-    oscillator.stop(audioContext.currentTime + 0.8);
-  }, []);
+    try {
+      const audioContext = getAudioContext();
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+      
+      oscillator.frequency.value = 880;
+      oscillator.type = 'sine';
+      
+      gainNode.gain.setValueAtTime(0.5, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.8);
+      
+      oscillator.start(audioContext.currentTime);
+      oscillator.stop(audioContext.currentTime + 0.8);
+    } catch (e) {
+      console.warn('Audio playback failed:', e);
+    }
+  }, [getAudioContext]);
 
   // Play notification sound (legacy, now uses bell)
   const playNotificationSound = useCallback(() => {
@@ -228,6 +251,9 @@ export default function BrewTimerContent({
   }, [isRunning, timeRemaining, currentStepIndex, steps, playTickSound, playBellSound]);
 
   const handleStart = () => {
+    // Unlock AudioContext on user interaction (required for mobile browsers)
+    getAudioContext();
+    
     // Skip preparation step if at index 0
     if (currentStepIndex === 0 && steps.length > 1) {
       setCurrentStepIndex(1);

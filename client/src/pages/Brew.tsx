@@ -279,19 +279,19 @@ export default function Brew() {
           <CardContent className="space-y-6">
             {/* Step 1: Select All Equipment & Recipe */}
             {step === 1 && (
-              <div className="space-y-4 animate-fade-in">
-                <div>
-                  <Label htmlFor="bean">
-                    <span className="flex items-center gap-2">
-                      <Bean className="h-4 w-4" />
-                      Coffee Bean
-                    </span>
-                  </Label>
+              <div className="space-y-3 animate-fade-in">
+                <div className="p-3 rounded-lg border bg-card hover:border-primary/30 transition-colors">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="rounded-full bg-primary/10 p-1.5">
+                      <Bean className="h-4 w-4 text-primary" />
+                    </div>
+                    <Label htmlFor="bean" className="font-medium">Coffee Bean</Label>
+                  </div>
                   <Select value={selectedBeanId} onValueChange={(value) => {
                     setSelectedBeanId(value);
                     setSelectedBatchId("");
                   }}>
-                    <SelectTrigger id="bean">
+                    <SelectTrigger id="bean" className="bg-background">
                       <SelectValue placeholder="Select coffee bean" />
                     </SelectTrigger>
                     <SelectContent>
@@ -305,15 +305,15 @@ export default function Brew() {
                 </div>
 
                 {selectedBean && selectedBean.batches.length > 0 && (
-                  <div>
-                    <Label htmlFor="batch">
-                      <span className="flex items-center gap-2">
-                        <Package className="h-4 w-4" />
-                        Batch
-                      </span>
-                    </Label>
+                  <div className="p-3 rounded-lg border bg-card hover:border-primary/30 transition-colors">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="rounded-full bg-primary/10 p-1.5">
+                        <Package className="h-4 w-4 text-primary" />
+                      </div>
+                      <Label htmlFor="batch" className="font-medium">Batch</Label>
+                    </div>
                     <Select value={selectedBatchId} onValueChange={setSelectedBatchId}>
-                      <SelectTrigger id="batch">
+                      <SelectTrigger id="batch" className="bg-background">
                         <SelectValue placeholder="Select batch" />
                       </SelectTrigger>
                       <SelectContent>
@@ -328,62 +328,64 @@ export default function Brew() {
                 )}
 
                 {selectedBean && selectedBean.batches.length === 0 && (
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-sm text-muted-foreground px-3">
                     No batches available. Please add a batch to this coffee bean first.
                   </p>
                 )}
 
-                <div>
-                  <Label htmlFor="grinder">
-                    <span className="flex items-center gap-2">
-                      <Coffee className="h-4 w-4" />
-                      Grinder
-                    </span>
-                  </Label>
-                  <Select value={selectedGrinderId} onValueChange={setSelectedGrinderId}>
-                    <SelectTrigger id="grinder">
-                      <SelectValue placeholder="Select grinder" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {grinders.map((grinder) => (
-                        <SelectItem key={grinder.id} value={grinder.id}>
-                          {grinder.model} ({grinder.burrType})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="p-3 rounded-lg border bg-card hover:border-primary/30 transition-colors">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="rounded-full bg-primary/10 p-1.5">
+                        <Coffee className="h-4 w-4 text-primary" />
+                      </div>
+                      <Label htmlFor="grinder" className="font-medium text-sm">Grinder</Label>
+                    </div>
+                    <Select value={selectedGrinderId} onValueChange={setSelectedGrinderId}>
+                      <SelectTrigger id="grinder" className="bg-background">
+                        <SelectValue placeholder="Select" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {grinders.map((grinder) => (
+                          <SelectItem key={grinder.id} value={grinder.id}>
+                            {grinder.model}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="p-3 rounded-lg border bg-card hover:border-primary/30 transition-colors">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="rounded-full bg-primary/10 p-1.5">
+                        <Droplets className="h-4 w-4 text-primary" />
+                      </div>
+                      <Label htmlFor="brewer" className="font-medium text-sm">Brewer</Label>
+                    </div>
+                    <Select value={selectedBrewerId} onValueChange={setSelectedBrewerId}>
+                      <SelectTrigger id="brewer" className="bg-background">
+                        <SelectValue placeholder="Select" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {brewers.map((brewer) => (
+                          <SelectItem key={brewer.id} value={brewer.id}>
+                            {brewer.model}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
 
-                <div>
-                  <Label htmlFor="brewer">
-                    <span className="flex items-center gap-2">
-                      <Droplets className="h-4 w-4" />
-                      Brewer
-                    </span>
-                  </Label>
-                  <Select value={selectedBrewerId} onValueChange={setSelectedBrewerId}>
-                    <SelectTrigger id="brewer">
-                      <SelectValue placeholder="Select brewer" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {brewers.map((brewer) => (
-                        <SelectItem key={brewer.id} value={brewer.id}>
-                          {brewer.model} ({brewer.type})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <Label htmlFor="recipe">
-                    <span className="flex items-center gap-2">
-                      <BookOpen className="h-4 w-4" />
-                      Recipe
-                    </span>
-                  </Label>
+                <div className="p-3 rounded-lg border bg-card hover:border-primary/30 transition-colors">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="rounded-full bg-primary/10 p-1.5">
+                      <BookOpen className="h-4 w-4 text-primary" />
+                    </div>
+                    <Label htmlFor="recipe" className="font-medium">Recipe</Label>
+                  </div>
                   <Select value={selectedRecipeId} onValueChange={handleRecipeSelect}>
-                    <SelectTrigger id="recipe">
+                    <SelectTrigger id="recipe" className="bg-background">
                       <SelectValue placeholder="Select recipe" />
                     </SelectTrigger>
                     <SelectContent>
@@ -395,21 +397,22 @@ export default function Brew() {
                     </SelectContent>
                   </Select>
                   {filteredRecipes.length === 0 && selectedGrinderId && selectedBrewerId && (
-                    <p className="text-sm text-muted-foreground mt-2">
-                      No recipes available for this grinder and brewer combination. Please add a recipe in settings first.
+                    <p className="text-xs text-muted-foreground mt-2">
+                      No recipes for this grinder/brewer combo.
                     </p>
                   )}
                 </div>
 
-                <div>
-                  <Label htmlFor="server">
-                    <span className="flex items-center gap-2">
-                      <GlassWater className="h-4 w-4" />
-                      Coffee Server (Optional)
-                    </span>
-                  </Label>
+                <div className="p-3 rounded-lg border border-dashed bg-muted/30 hover:border-primary/30 transition-colors">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="rounded-full bg-muted p-1.5">
+                      <GlassWater className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                    <Label htmlFor="server" className="font-medium text-muted-foreground">Coffee Server</Label>
+                    <span className="text-xs text-muted-foreground">(Optional)</span>
+                  </div>
                   <Select value={selectedServerId} onValueChange={setSelectedServerId}>
-                    <SelectTrigger id="server">
+                    <SelectTrigger id="server" className="bg-background">
                       <SelectValue placeholder="Select coffee server" />
                     </SelectTrigger>
                     <SelectContent>

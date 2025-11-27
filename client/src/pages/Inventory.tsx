@@ -40,6 +40,8 @@ export default function Inventory() {
   const [usageAmount, setUsageAmount] = useState("");
   const [usageNotes, setUsageNotes] = useState("");
   const [lowStockThreshold, setLowStockThreshold] = useState("");
+  const [updateWeightDialogOpen, setUpdateWeightDialogOpen] = useState(false);
+  const [newWeight, setNewWeight] = useState("");
 
   // Calculate inventory stats
   const inventoryStats = useMemo(() => {
@@ -150,6 +152,56 @@ export default function Inventory() {
     setSelectedBean(bean);
     setEditingBatch(batch);
     setUsageDialogOpen(true);
+  };
+
+  const openUpdateWeightDialog = (bean: CoffeeBean, batch: CoffeeBatch) => {
+    setSelectedBean(bean);
+    setEditingBatch(batch);
+    setNewWeight(batch.currentWeight.toString());
+    setUpdateWeightDialogOpen(true);
+  };
+
+  const handleUpdateWeight = () => {
+    if (!selectedBean || !editingBatch || !newWeight || isNaN(Number(newWeight))) {
+      toast({
+        title: "Invalid weight",
+        description: "Please enter a valid weight",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const weight = Number(newWeight);
+    if (weight < 0) {
+      toast({
+        title: "Invalid weight",
+        description: "Weight cannot be negative",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const updatedBatches = selectedBean.batches.map(batch => {
+      if (batch.id === editingBatch.id) {
+        return {
+          ...batch,
+          currentWeight: weight,
+          isActive: weight > 0,
+        };
+      }
+      return batch;
+    });
+
+    updateCoffeeBean(selectedBean.id, { batches: updatedBatches });
+    
+    toast({
+      title: "Weight updated",
+      description: `${selectedBean.name} batch weight set to ${weight}g`,
+    });
+
+    setUpdateWeightDialogOpen(false);
+    setNewWeight("");
+    setEditingBatch(null);
   };
 
   return (
@@ -310,16 +362,26 @@ export default function Inventory() {
                                     </p>
                                   )}
                                 </div>
-                                {batch.isActive && (
+                                <div className="flex flex-col gap-2">
                                   <Button
                                     size="sm"
                                     variant="outline"
-                                    onClick={() => openUsageDialog(bean, batch)}
+                                    onClick={() => openUpdateWeightDialog(bean, batch)}
                                   >
-                                    <TrendingDown className="h-4 w-4 mr-1" />
-                                    Record Usage
+                                    <Edit className="h-4 w-4 mr-1" />
+                                    Update Remaining
                                   </Button>
-                                )}
+                                  {batch.isActive && (
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => openUsageDialog(bean, batch)}
+                                    >
+                                      <TrendingDown className="h-4 w-4 mr-1" />
+                                      Record Usage
+                                    </Button>
+                                  )}
+                                </div>
                               </div>
                             </div>
                           ))}
@@ -406,6 +468,44 @@ export default function Inventory() {
               </Button>
               <Button onClick={handleRecordUsage}>
                 Record Usage
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Update Remaining Dialog */}
+        <Dialog open={updateWeightDialogOpen} onOpenChange={setUpdateWeightDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Update Remaining Weight</DialogTitle>
+              <DialogDescription>
+                {selectedBean && editingBatch && (
+                  <>Set the current remaining weight for this batch (original: {editingBatch.weight}g)</>
+                )}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="newWeight">Remaining Weight (grams)</Label>
+                <Input
+                  id="newWeight"
+                  type="number"
+                  step="0.1"
+                  placeholder="0"
+                  value={newWeight}
+                  onChange={(e) => setNewWeight(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Enter the actual remaining weight of coffee in this batch
+                </p>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setUpdateWeightDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleUpdateWeight}>
+                Update Remaining
               </Button>
             </DialogFooter>
           </DialogContent>

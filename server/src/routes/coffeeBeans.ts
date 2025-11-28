@@ -144,6 +144,8 @@ router.put('/:id', (req, res) => {
   
   // Handle batches update - update existing batches in place to preserve IDs
   if (batches) {
+    const checkBatchExists = db.prepare(`SELECT id FROM coffee_batches WHERE id = ? AND coffee_bean_id = ?`);
+    
     const updateBatch = db.prepare(`
       UPDATE coffee_batches SET price = ?, roast_date = ?, weight = ?, current_weight = ?, 
                                 purchase_date = ?, notes = ?, is_active = ?
@@ -157,7 +159,10 @@ router.put('/:id', (req, res) => {
     `);
     
     for (const batch of batches) {
-      if (batch.id) {
+      // Check if batch actually exists in database (client may send temp IDs for new batches)
+      const existingBatch = batch.id ? checkBatchExists.get(batch.id, id) : null;
+      
+      if (existingBatch) {
         // Update existing batch
         updateBatch.run(batch.price, batch.roastDate, batch.weight, 
                         batch.currentWeight, batch.purchaseDate, batch.notes, 

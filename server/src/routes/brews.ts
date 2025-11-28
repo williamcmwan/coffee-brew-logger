@@ -75,13 +75,16 @@ router.post('/', (req, res) => {
   
   const date = new Date().toISOString();
   
+  // Convert empty strings to null for foreign key fields
+  const toNullableId = (id: any) => (id && id !== '' && id !== 'none') ? id : null;
+  
   const result = db.prepare(`
     INSERT INTO brews (user_id, date, coffee_bean_id, batch_id, grinder_id, brewer_id, 
                        recipe_id, coffee_server_id, dose, grind_size, water, yield, temperature, brew_time, 
                        tds, extraction_yield, rating, comment, photo, favorite, template_notes)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(userId, date, coffeeBeanId || null, batchId || null, grinderId || null, 
-         brewerId || null, recipeId || null, coffeeServerId || null, dose, grindSize, water, yieldVal, temperature,
+  `).run(userId, date, toNullableId(coffeeBeanId), toNullableId(batchId), toNullableId(grinderId), 
+         toNullableId(brewerId), toNullableId(recipeId), toNullableId(coffeeServerId), dose, grindSize, water, yieldVal, temperature,
          brewTime, tds, extractionYield, rating, comment, photo, favorite ? 1 : 0,
          templateNotes ? JSON.stringify(templateNotes) : null);
   
@@ -101,14 +104,17 @@ router.put('/:id', (req, res) => {
           water, yield: yieldVal, temperature, brewTime, tds, extractionYield,
           rating, comment, photo, favorite, templateNotes } = req.body;
   
+  // Convert empty strings to null for foreign key fields
+  const toNullableId = (id: any) => (id && id !== '' && id !== 'none') ? id : null;
+  
   db.prepare(`
     UPDATE brews SET coffee_bean_id = ?, batch_id = ?, grinder_id = ?, brewer_id = ?, 
            recipe_id = ?, coffee_server_id = ?, dose = ?, grind_size = ?, water = ?, yield = ?, temperature = ?, 
            brew_time = ?, tds = ?, extraction_yield = ?, rating = ?, comment = ?, 
            photo = ?, favorite = ?, template_notes = ?
     WHERE id = ? AND user_id = ?
-  `).run(coffeeBeanId || null, batchId || null, grinderId || null, brewerId || null,
-         recipeId || null, coffeeServerId || null, dose, grindSize, water, yieldVal, temperature, brewTime,
+  `).run(toNullableId(coffeeBeanId), toNullableId(batchId), toNullableId(grinderId), toNullableId(brewerId),
+         toNullableId(recipeId), toNullableId(coffeeServerId), dose, grindSize, water, yieldVal, temperature, brewTime,
          tds, extractionYield, rating, comment, photo, favorite ? 1 : 0,
          templateNotes ? JSON.stringify(templateNotes) : null, id, userId);
   

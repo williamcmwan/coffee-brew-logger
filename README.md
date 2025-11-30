@@ -7,10 +7,13 @@ A coffee brewing journal application to track your brews, recipes, equipment, an
 ```
 ├── client/             # React frontend (Vite + TypeScript)
 ├── server/             # Express backend with SQLite
-├── scripts/            # Utility scripts
+│   └── scripts/        # Server-side TypeScript utilities
+├── scripts/            # Shell scripts for operations
 │   ├── deploy.sh       # Build and deploy the application
 │   ├── app.sh          # Start/stop/restart the application
-│   └── commit-push.sh  # Git commit and push helper
+│   ├── commit-push.sh  # Git commit and push helper
+│   ├── migrate_upload.sh       # Migrate uploads to user folders
+│   └── cleanup_orphan_upload.sh # Remove orphan upload files
 ```
 
 ## Quick Start
@@ -58,6 +61,24 @@ The application will be available at http://localhost:3003
 ./scripts/commit-push.sh
 ```
 
+### Upload Management
+
+Uploads are organized into user-specific folders based on email address.
+
+```bash
+# Migrate existing uploads to user folders (dry run)
+./scripts/migrate_upload.sh
+
+# Migrate existing uploads to user folders (live)
+./scripts/migrate_upload.sh --run
+
+# Find and remove orphan upload files (dry run)
+./scripts/cleanup_orphan_upload.sh
+
+# Find and remove orphan upload files (live)
+./scripts/cleanup_orphan_upload.sh --run
+```
+
 ### Environment Variables
 
 Copy `.env.example` to `.env` and configure:
@@ -77,10 +98,12 @@ ALLOWED_ORIGINS=http://localhost:5173,http://localhost:3003,https://your-domain.
 # Optional: Gemini API Key for AI coffee bag scanning
 GEMINI_API_KEY=your_gemini_api_key_here
 
-# Optional: EmailJS for contact form
+# Optional: EmailJS for contact form and password reset
 VITE_EMAILJS_SERVICE_ID=your_service_id
 VITE_EMAILJS_TEMPLATE_ID=your_template_id
 VITE_EMAILJS_PUBLIC_KEY=your_public_key
+EMAILJS_PRIVATE_KEY=your_private_key
+EMAILJS_PASSWORD_RESET_TEMPLATE_ID=your_reset_template_id
 
 # Optional: reCAPTCHA for contact form
 VITE_RECAPTCHA_SITE_KEY=your_site_key
@@ -119,13 +142,19 @@ The client dev server runs on port 5173 and proxies API requests to the server o
 
 ## Security Features
 
-- **JWT Authentication**: Secure token-based authentication with 7-day expiry
+- **JWT Authentication**: Secure token-based authentication with 30-day expiry
 - **Password Hashing**: Bcrypt with 12 rounds for secure password storage
 - **Google OAuth**: Server-side token verification for Google Sign-In
-- **Rate Limiting**: Protection against brute force attacks (20 attempts per 10 minutes for auth)
+- **Rate Limiting**: Protection against brute force attacks
+  - Auth endpoints: 20 attempts per 10 minutes
+  - Password reset: 5 attempts per hour
+  - General API: 100 requests per minute
 - **CORS**: Configurable allowed origins
-- **Helmet**: Security headers (X-Content-Type-Options, X-Frame-Options, etc.)
+- **Helmet**: Security headers (HSTS, X-Content-Type-Options, X-Frame-Options, Referrer-Policy, XSS filter)
 - **Input Validation**: Zod schemas for API input validation
+- **User Data Isolation**: All data queries filtered by authenticated user ID (IDOR protection)
+- **User-Specific Uploads**: Files organized in user folders with ownership verification
+- **Path Traversal Protection**: Strict filename validation for uploads
 
 ## Tech Stack
 

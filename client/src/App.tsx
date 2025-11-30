@@ -6,6 +6,8 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AppProvider, useApp } from "./contexts/AppContext";
 import CookieConsent from "./components/CookieConsent";
 import Login from "./pages/Login";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 import Dashboard from "./pages/Dashboard";
 import Brew from "./pages/Brew";
 import BrewHistory from "./pages/BrewHistory";
@@ -41,6 +43,8 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Navigate to="/dashboard" />} />
             <Route path="/login" element={<Login />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
             <Route
               path="/dashboard"
               element={

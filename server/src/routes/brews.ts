@@ -69,9 +69,15 @@ router.get('/', (req: AuthRequest, res: Response) => {
 router.post('/', (req: AuthRequest, res: Response) => {
   const userId = req.userId;
   
+  // Validate input
+  const result = brewSchema.safeParse(req.body);
+  if (!result.success) {
+    return res.status(400).json({ error: result.error.issues[0]?.message || "Invalid input" });
+  }
+  
   const { coffeeBeanId, batchId, grinderId, brewerId, recipeId, coffeeServerId, dose, grindSize,
           water, yield: yieldVal, temperature, brewTime, tds, extractionYield,
-          rating, comment, photo, favorite, templateNotes } = req.body;
+          rating, comment, photo, favorite, templateNotes } = result.data;
   
   const date = new Date().toISOString();
   
@@ -99,9 +105,15 @@ router.put('/:id', (req: AuthRequest, res: Response) => {
   const userId = req.userId;
   const { id } = req.params;
   
+  // Validate input
+  const result = brewSchema.safeParse(req.body);
+  if (!result.success) {
+    return res.status(400).json({ error: result.error.issues[0]?.message || "Invalid input" });
+  }
+  
   const { coffeeBeanId, batchId, grinderId, brewerId, recipeId, coffeeServerId, dose, grindSize,
           water, yield: yieldVal, temperature, brewTime, tds, extractionYield,
-          rating, comment, photo, favorite, templateNotes } = req.body;
+          rating, comment, photo, favorite, templateNotes } = result.data;
   
   // Convert empty strings to null for foreign key fields
   const toNullableId = (id: any) => (id && id !== '' && id !== 'none') ? id : null;

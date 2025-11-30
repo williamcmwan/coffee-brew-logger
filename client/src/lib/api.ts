@@ -75,15 +75,33 @@ export const api = {
       }
       return response;
     },
-    signup: async (email: string, password: string, name: string): Promise<AuthUser> => {
+    signup: async (email: string, password: string, confirmPassword: string, name: string): Promise<AuthUser> => {
       const response = await request<AuthUser>('/auth/signup', {
         method: 'POST',
-        body: JSON.stringify({ email, password, name }),
+        body: JSON.stringify({ email, password, confirmPassword, name }),
       });
       if (response.token) {
         setAuthToken(response.token);
       }
       return response;
+    },
+    changePassword: async (currentPassword: string, newPassword: string, confirmNewPassword: string): Promise<{ message: string }> => {
+      return request<{ message: string }>('/auth/change-password', {
+        method: 'POST',
+        body: JSON.stringify({ currentPassword, newPassword, confirmNewPassword }),
+      });
+    },
+    forgotPassword: async (email: string): Promise<{ message: string; resetLink?: string }> => {
+      return request<{ message: string; resetLink?: string }>('/auth/forgot-password', {
+        method: 'POST',
+        body: JSON.stringify({ email }),
+      });
+    },
+    resetPassword: async (token: string, newPassword: string, confirmNewPassword: string): Promise<{ message: string }> => {
+      return request<{ message: string }>('/auth/reset-password', {
+        method: 'POST',
+        body: JSON.stringify({ token, newPassword, confirmNewPassword }),
+      });
     },
     social: async (provider: 'google' | 'apple', idToken: string): Promise<AuthUser> => {
       const response = await request<AuthUser>('/auth/social', {

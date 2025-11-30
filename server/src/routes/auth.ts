@@ -4,9 +4,66 @@ import { OAuth2Client } from 'google-auth-library';
 import { db } from '../db/schema.js';
 import { seedUserDefaults } from '../utils/seedUserDefaults.js';
 import { generateToken } from '../middleware/auth.js';
-import { loginSchema, signupSchema, socialLoginSchema } from '../middleware/validation.js';
+import {
+  loginSchema,
+  signupSchema,
+  socialLoginSchema,
+  changePasswordSchema,
+  forgotPasswordSchema,
+  resetPasswordSchema,
+} from '../middleware/validation.js';
+import { authMiddleware, AuthRequest } from '../middleware/auth.js';
+import crypto from 'crypto';
 
 const router = Router();
+
+// EmailJS helper - reads env vars at runtime (after dotenv loads)
+async function sendPasswordResetEmail(toEmail: string, userName: string, resetLink: string): Promise<boolean> {
+  const serviceId = process.env.VITE_EMAILJS_SERVICE_ID;
+  const publicKey = process.env.VITE_EMAILJS_PUBLIC_KEY;
+  const privateKey = process.env.EMAILJS_PRIVATE_KEY;
+  const templateId = process.env.EMAILJS_PASSWORD_RESET_TEMPLATE_ID;
+
+  if (!serviceId || !publicKey || !templateId || !privateKey) {
+    console.log('EmailJS not fully configured - skipping email send');
+    return false;
+  }
+
+  try {
+    const payload: Record<string, unknown> = {
+      service_id: serviceId,
+      template_id: templateId,
+      user_id: publicKey,
+      template_params: {
+        to_email: toEmail,
+        to_name: userName,
+        reset_link: resetLink,
+      },
+    };
+
+    // Add private key if available (required for server-side calls)
+    if (privateKey) {
+      payload.accessToken = privateKey;
+    }
+
+    const response = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('EmailJS error:', response.status, errorText);
+      return false;
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('Failed to send email:', error);
+    return false;
+  }
+}
 
 const SALT_ROUNDS = 12;
 
@@ -90,7 +147,7 @@ router.post('/signup', async (req, res) => {
       return res.status(400).json({ error: result.error.issues[0]?.message || "Invalid input" });
     }
     
-    const { email, password, name } = result.data;
+    const { email, password, name } = result.data; // confirmPassword already validated by schema
     
     const existing = db.prepare('SELECT id FROM users WHERE LOWER(email) = LOWER(?)')
       .get(email);
@@ -204,6 +261,146 @@ router.post('/social', async (req, res) => {
   }
 });
 
+// Change password endpoint (requires authentication)
+router.post('/change-password', authMiddleware, async (req: AuthRequest, res) => {
+  try {
+    const result = changePasswordSchema.safeParse(req.body);
+    if (!result.success) {
+      return res.status(400).json({ error: result.error.issues[0]?.message || "Invalid input" });
+    }
+
+    const { currentPassword, newPassword } = result.data;
+    const userId = req.userId;
+
+    const user = db.prepare('SELECT id, password, auth_provider FROM users WHERE id = ?')
+      .get(userId) as User | undefined;
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    if (user.auth_provider !== 'email') {
+      return res.status(400).json({ error: 'Password change is not available for social login accounts' });
+    }
+
+    if (!user.password) {
+      return res.status(400).json({ error: 'No password set for this account' });
+    }
+
+    // Verify current password
+    let isValidPassword = false;
+    if (user.password.startsWith('$2')) {
+      isValidPassword = await bcrypt.compare(currentPassword, user.password);
+    } else {
+      isValidPassword = user.password === currentPassword;
+    }
+
+    if (!isValidPassword) {
+      return res.status(401).json({ error: 'Current password is incorrect' });
+    }
+
+    // Hash and save new password
+    const hashedPassword = await bcrypt.hash(newPassword, SALT_ROUNDS);
+    db.prepare('UPDATE users SET password = ? WHERE id = ?').run(hashedPassword, userId);
+
+    res.json({ message: 'Password changed successfully' });
+  } catch (error) {
+    console.error('Change password error:', error);
+    res.status(500).json({ error: 'An error occurred while changing password' });
+  }
+});
+
+// Forgot password - request reset token
+router.post('/forgot-password', async (req, res) => {
+  try {
+    const result = forgotPasswordSchema.safeParse(req.body);
+    if (!result.success) {
+      return res.status(400).json({ error: result.error.issues[0]?.message || "Invalid input" });
+    }
+
+    const { email } = result.data;
+
+    const user = db.prepare('SELECT id, name, auth_provider FROM users WHERE LOWER(email) = LOWER(?)')
+      .get(email) as { id: number; name: string; auth_provider: string } | undefined;
+
+    // Always return success to prevent email enumeration
+    if (!user || user.auth_provider !== 'email') {
+      return res.json({ message: 'If an account exists with this email, you will receive a reset link.' });
+    }
+
+    // Generate secure token
+    const token = crypto.randomBytes(32).toString('hex');
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString(); // 1 hour
+
+    // Invalidate any existing tokens for this user
+    db.prepare('UPDATE password_reset_tokens SET used = 1 WHERE user_id = ? AND used = 0').run(user.id);
+
+    // Store new token
+    db.prepare('INSERT INTO password_reset_tokens (user_id, token, expires_at) VALUES (?, ?, ?)')
+      .run(user.id, token, expiresAt);
+
+    const appUrl = process.env.VITE_APP_URL || 'http://localhost:5173';
+    const resetLink = `${appUrl}/reset-password?token=${token}`;
+
+    // Try to send email via EmailJS
+    const emailSent = await sendPasswordResetEmail(email, user.name, resetLink);
+    
+    if (emailSent) {
+      console.log(`Password reset email sent to ${email}`);
+    } else {
+      console.log(`Password reset link for ${email}: ${resetLink}`);
+    }
+
+    // Never expose reset link in response - log it server-side only for debugging
+    res.json({ 
+      message: 'If an account exists with this email, you will receive a reset link.'
+    });
+  } catch (error) {
+    console.error('Forgot password error:', error);
+    res.status(500).json({ error: 'An error occurred' });
+  }
+});
+
+// Reset password with token
+router.post('/reset-password', async (req, res) => {
+  try {
+    const result = resetPasswordSchema.safeParse(req.body);
+    if (!result.success) {
+      return res.status(400).json({ error: result.error.issues[0]?.message || "Invalid input" });
+    }
+
+    const { token, newPassword } = result.data;
+
+    // Find valid token
+    const resetToken = db.prepare(`
+      SELECT id, user_id, expires_at FROM password_reset_tokens 
+      WHERE token = ? AND used = 0
+    `).get(token) as { id: number; user_id: number; expires_at: string } | undefined;
+
+    if (!resetToken) {
+      return res.status(400).json({ error: 'Invalid or expired reset link' });
+    }
+
+    // Check expiration
+    if (new Date(resetToken.expires_at) < new Date()) {
+      db.prepare('UPDATE password_reset_tokens SET used = 1 WHERE id = ?').run(resetToken.id);
+      return res.status(400).json({ error: 'Reset link has expired. Please request a new one.' });
+    }
+
+    // Hash and update password
+    const hashedPassword = await bcrypt.hash(newPassword, SALT_ROUNDS);
+    db.prepare('UPDATE users SET password = ? WHERE id = ?').run(hashedPassword, resetToken.user_id);
+
+    // Mark token as used
+    db.prepare('UPDATE password_reset_tokens SET used = 1 WHERE id = ?').run(resetToken.id);
+
+    res.json({ message: 'Password reset successfully. You can now log in with your new password.' });
+  } catch (error) {
+    console.error('Reset password error:', error);
+    res.status(500).json({ error: 'An error occurred while resetting password' });
+  }
+});
+
 // OAuth redirect flow for mobile - initiate
 router.get('/google', (req, res) => {
   const googleClientId = getGoogleClientId();
@@ -219,9 +416,11 @@ router.get('/google', (req, res) => {
   const state = Math.random().toString(36).substring(7); // Simple state for CSRF protection
   
   // Store state in a cookie for verification
+  // Use x-forwarded-proto for secure flag when behind reverse proxy
+  const isSecure = req.get('x-forwarded-proto') === 'https' || req.protocol === 'https';
   res.cookie('oauth_state', state, { 
     httpOnly: true, 
-    secure: req.protocol === 'https',
+    secure: isSecure,
     sameSite: 'lax',
     maxAge: 5 * 60 * 1000 // 5 minutes
   });

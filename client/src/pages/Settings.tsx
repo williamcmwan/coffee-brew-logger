@@ -1,9 +1,43 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Coffee, Droplet, BookOpen, Bean, FileText, GlassWater, ChevronRight } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { ArrowLeft, Coffee, Droplet, BookOpen, Bean, FileText, GlassWater, ChevronRight, Key } from "lucide-react";
+import { useApp } from "@/contexts/AppContext";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Settings() {
   const navigate = useNavigate();
+  const { user, changePassword } = useApp();
+  const { toast } = useToast();
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmNewPassword, setConfirmNewPassword] = useState("");
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newPassword !== confirmNewPassword) {
+      toast({ title: "Error", description: "New passwords do not match", variant: "destructive" });
+      return;
+    }
+    setIsChangingPassword(true);
+    try {
+      await changePassword(currentPassword, newPassword, confirmNewPassword);
+      toast({ title: "Success", description: "Password changed successfully" });
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmNewPassword("");
+    } catch (error) {
+      toast({ title: "Error", description: error instanceof Error ? error.message : "Failed to change password", variant: "destructive" });
+    } finally {
+      setIsChangingPassword(false);
+    }
+  };
+
+  const isEmailUser = user?.authProvider === 'email' || !user?.authProvider;
 
   const sections = [
     { title: "Coffee Beans", icon: Bean, path: "/settings/beans", description: "Manage your coffee collection" },
@@ -40,6 +74,35 @@ export default function Settings() {
             </button>
           ))}
         </div>
+
+        {isEmailUser && (
+          <Card className="mt-6">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Key className="h-5 w-5" />
+                Change Password
+              </CardTitle>
+              <CardDescription>Update your account password</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleChangePassword} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="currentPassword">Current Password</Label>
+                  <Input id="currentPassword" type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} required disabled={isChangingPassword} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="newPassword">New Password</Label>
+                  <Input id="newPassword" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required minLength={6} disabled={isChangingPassword} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="confirmNewPassword">Confirm New Password</Label>
+                  <Input id="confirmNewPassword" type="password" value={confirmNewPassword} onChange={(e) => setConfirmNewPassword(e.target.value)} required minLength={6} disabled={isChangingPassword} />
+                </div>
+                <Button type="submit" disabled={isChangingPassword}>{isChangingPassword ? "Changing..." : "Change Password"}</Button>
+              </form>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   );

@@ -132,8 +132,9 @@ export interface Brew {
 interface AppContextType {
   user: User | null;
   login: (email: string, password: string) => Promise<void>;
-  signup: (email: string, password: string, name: string) => Promise<void>;
+  signup: (email: string, password: string, confirmPassword: string, name: string) => Promise<void>;
   socialLogin: (provider: 'google' | 'apple', idToken: string) => Promise<void>;
+  changePassword: (currentPassword: string, newPassword: string, confirmNewPassword: string) => Promise<void>;
   logout: () => void;
   grinders: Grinder[];
   addGrinder: (grinder: Omit<Grinder, "id">) => Promise<void>;
@@ -243,13 +244,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     await loadData();
   };
 
-  const signup = async (email: string, password: string, name: string) => {
-    const userData = await api.auth.signup(email, password, name);
+  const signup = async (email: string, password: string, confirmPassword: string, name: string) => {
+    const userData = await api.auth.signup(email, password, confirmPassword, name);
     const userWithoutToken = { ...userData };
     delete (userWithoutToken as any).token;
     setUser(userWithoutToken);
     localStorage.setItem("user", JSON.stringify(userWithoutToken));
     localStorage.setItem("userId", String(userData.id));
+  };
+
+  const changePassword = async (currentPassword: string, newPassword: string, confirmNewPassword: string) => {
+    await api.auth.changePassword(currentPassword, newPassword, confirmNewPassword);
   };
 
   const socialLogin = async (provider: 'google' | 'apple', idToken: string) => {
@@ -397,7 +402,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   return (
     <AppContext.Provider
       value={{
-        user, login, signup, socialLogin, logout,
+        user, login, signup, socialLogin, changePassword, logout,
         grinders, addGrinder, updateGrinder, deleteGrinder,
         brewers, addBrewer, updateBrewer, deleteBrewer,
         recipes, addRecipe, updateRecipe, deleteRecipe, toggleRecipeFavorite,

@@ -51,6 +51,15 @@ app.set('trust proxy', 1);
 app.use(helmet({
   crossOriginResourcePolicy: { policy: 'cross-origin' },
   contentSecurityPolicy: false, // Disable for SPA compatibility
+  // Additional security headers
+  hsts: {
+    maxAge: 31536000, // 1 year
+    includeSubDomains: true,
+    preload: true,
+  },
+  referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+  noSniff: true,
+  xssFilter: true,
 }));
 
 // CORS configuration - restrict to allowed origins
@@ -90,6 +99,15 @@ const authLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+// Stricter rate limiting for password reset (prevent email bombing)
+const passwordResetLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 5, // 5 attempts per hour per IP
+  message: { error: 'Too many password reset attempts, please try again later' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 // General API rate limiting
 const apiLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
@@ -107,6 +125,8 @@ app.use(cookieParser());
 app.use('/api/auth/login', authLimiter);
 app.use('/api/auth/signup', authLimiter);
 app.use('/api/auth/social', authLimiter);
+app.use('/api/auth/forgot-password', passwordResetLimiter);
+app.use('/api/auth/reset-password', authLimiter);
 app.use('/api', apiLimiter);
 
 // Public routes (no auth required)
@@ -123,8 +143,16 @@ app.use('/api/uploads', authMiddleware, uploadsRoutes);
 app.use('/api/coffee-servers', authMiddleware, coffeeServersRoutes);
 app.use('/api/ai', authMiddleware, aiRoutes);
 
-// Serve uploaded images (still public for sharing, but with random filenames)
-app.use('/uploads', express.static(uploadsDir));
+// Serve uploaded images from user-specific folders
+// Path format: /uploads/{user_folder}/{filename}.jpg
+app.use('/uploads', (req, res, next) => {
+  // Validate path format: /{user_folder}/{32-hex-chars}.jpg
+  const pathMatch = req.path.match(/^\/([a-z0-9._-]+)\/([a-f0-9]{32}\.jpg)$/);
+  if (!pathMatch) {
+    return res.status(400).json({ error: 'Invalid path format' });
+  }
+  next();
+}, express.static(uploadsDir));
 
 // Serve static files from client build
 const clientDistPath = path.join(__dirname, '../../client/dist');

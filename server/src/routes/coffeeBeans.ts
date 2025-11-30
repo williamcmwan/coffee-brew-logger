@@ -132,6 +132,12 @@ router.put('/:id', (req: AuthRequest, res: Response) => {
   const userId = req.userId;
   const { id } = req.params;
   
+  // Verify the coffee bean belongs to the user before any updates
+  const existingBean = db.prepare('SELECT id FROM coffee_beans WHERE id = ? AND user_id = ?').get(id, userId);
+  if (!existingBean) {
+    return res.status(404).json({ error: 'Coffee bean not found' });
+  }
+  
   // Allow partial updates - don't validate, just extract fields
   const { photo, name, roaster, country, region, altitude, varietal, process, 
           roastLevel, roastFor, tastingNotes, url, favorite, lowStockThreshold, batches } = req.body;
@@ -149,7 +155,12 @@ router.put('/:id', (req: AuthRequest, res: Response) => {
   
   // Handle batches update - update existing batches in place to preserve IDs
   if (batches) {
-    const checkBatchExists = db.prepare(`SELECT id FROM coffee_batches WHERE id = ? AND coffee_bean_id = ?`);
+    // Verify batch ownership: batch must belong to a coffee bean owned by this user
+    const checkBatchOwnership = db.prepare(`
+      SELECT cb.id FROM coffee_batches cb 
+      JOIN coffee_beans b ON cb.coffee_bean_id = b.id 
+      WHERE cb.id = ? AND b.user_id = ?
+    `);
     
     const updateBatch = db.prepare(`
       UPDATE coffee_batches SET price = ?, roast_date = ?, weight = ?, current_weight = ?, 
@@ -164,16 +175,17 @@ router.put('/:id', (req: AuthRequest, res: Response) => {
     `);
     
     for (const batch of batches) {
-      // Check if batch actually exists in database (client may send temp IDs for new batches)
-      const existingBatch = batch.id ? checkBatchExists.get(batch.id, id) : null;
-      
-      if (existingBatch) {
-        // Update existing batch
-        updateBatch.run(batch.price, batch.roastDate, batch.weight, 
-                        batch.currentWeight, batch.purchaseDate, batch.notes, 
-                        batch.isActive ? 1 : 0, batch.id, id);
+      if (batch.id) {
+        // Verify ownership before updating existing batch
+        const ownedBatch = checkBatchOwnership.get(batch.id, userId);
+        if (ownedBatch) {
+          updateBatch.run(batch.price, batch.roastDate, batch.weight, 
+                          batch.currentWeight, batch.purchaseDate, batch.notes, 
+                          batch.isActive ? 1 : 0, batch.id, id);
+        }
+        // Silently skip batches that don't belong to user (prevents IDOR)
       } else {
-        // Insert new batch
+        // Insert new batch (already verified bean ownership above)
         insertBatch.run(id, batch.price, batch.roastDate, batch.weight, 
                         batch.currentWeight, batch.purchaseDate, batch.notes, 
                         batch.isActive ? 1 : 0);

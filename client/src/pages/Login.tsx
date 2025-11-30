@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useApp } from "@/contexts/AppContext";
 import { Button } from "@/components/ui/button";
@@ -9,17 +9,22 @@ import { Separator } from "@/components/ui/separator";
 import { Coffee } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { setAuthToken } from "@/lib/api";
+import ReCAPTCHA from "react-google-recaptcha";
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || "";
+const RECAPTCHA_SITE_KEY = import.meta.env.VITE_RECAPTCHA_SITE_KEY || "";
 
 export default function Login() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [name, setName] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [socialLoading, setSocialLoading] = useState<"google" | null>(null);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const recaptchaRef = useRef<ReCAPTCHA>(null);
   const { login, signup, user } = useApp();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -50,6 +55,13 @@ export default function Login() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Require CAPTCHA for signup only
+    if (!isLogin && RECAPTCHA_SITE_KEY && !captchaToken) {
+      toast({ title: "Please complete the CAPTCHA", variant: "destructive" });
+      return;
+    }
+    
     setIsLoading(true);
     try {
       if (isLogin) {
@@ -57,13 +69,16 @@ export default function Login() {
         toast({ title: "Welcome back!", description: "You have successfully logged in" });
       } else {
         if (!name.trim()) throw new Error("Please enter your name");
-        await signup(email.trim(), password, name.trim());
+        if (password !== confirmPassword) throw new Error("Passwords do not match");
+        await signup(email.trim(), password, confirmPassword, name.trim());
         toast({ title: "Account created!", description: "Welcome to your brew journal" });
       }
       window.location.href = "/dashboard";
     } catch (error) {
       toast({ title: isLogin ? "Login failed" : "Sign up failed", description: error instanceof Error ? error.message : "An error occurred", variant: "destructive" });
       setIsLoading(false);
+      recaptchaRef.current?.reset();
+      setCaptchaToken(null);
     }
   };
 
@@ -116,10 +131,26 @@ export default function Login() {
               <Label htmlFor="password">Password</Label>
               <Input id="password" type="password" placeholder="********" value={password} onChange={(e) => setPassword(e.target.value)} required disabled={isAnyLoading} />
             </div>
-            <Button type="submit" className="w-full" disabled={isAnyLoading}>{isLoading ? "Please wait..." : (isLogin ? "Sign in" : "Sign up")}</Button>
+            {!isLogin && (
+              <div className="space-y-2">
+                <Label htmlFor="confirmPassword">Confirm Password</Label>
+                <Input id="confirmPassword" type="password" placeholder="********" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required disabled={isAnyLoading} />
+              </div>
+            )}
+            {!isLogin && RECAPTCHA_SITE_KEY && (
+              <div className="flex justify-center">
+                <ReCAPTCHA ref={recaptchaRef} sitekey={RECAPTCHA_SITE_KEY} onChange={setCaptchaToken} />
+              </div>
+            )}
+            <Button type="submit" className="w-full" disabled={isAnyLoading || (!isLogin && !!RECAPTCHA_SITE_KEY && !captchaToken)}>{isLoading ? "Please wait..." : (isLogin ? "Sign in" : "Sign up")}</Button>
           </form>
-          <div className="text-center text-sm">
-            <button type="button" onClick={() => { setIsLogin(!isLogin); setEmail(""); setPassword(""); setName(""); }} className="text-primary hover:underline" disabled={isAnyLoading}>
+          <div className="text-center text-sm space-y-2">
+            {isLogin && (
+              <button type="button" onClick={() => navigate("/forgot-password")} className="text-muted-foreground hover:text-primary hover:underline block w-full" disabled={isAnyLoading}>
+                Forgot your password?
+              </button>
+            )}
+            <button type="button" onClick={() => { setIsLogin(!isLogin); setEmail(""); setPassword(""); setConfirmPassword(""); setName(""); setCaptchaToken(null); recaptchaRef.current?.reset(); }} className="text-primary hover:underline" disabled={isAnyLoading}>
               {isLogin ? "Don't have an account? Sign up" : "Already have an account? Sign in"}
             </button>
           </div>

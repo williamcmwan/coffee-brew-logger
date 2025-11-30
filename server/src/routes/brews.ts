@@ -1,5 +1,7 @@
-import { Router } from 'express';
+import { Router, Response } from 'express';
 import { db } from '../db/schema.js';
+import { AuthRequest } from '../middleware/auth.js';
+import { brewSchema } from '../middleware/validation.js';
 
 const router = Router();
 
@@ -27,9 +29,8 @@ interface BrewRow {
   template_notes: string | null;
 }
 
-router.get('/', (req, res) => {
-  const userId = req.headers['x-user-id'];
-  if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+router.get('/', (req: AuthRequest, res: Response) => {
+  const userId = req.userId;
   
   const brews = db.prepare(`
     SELECT id, date, coffee_bean_id, batch_id, grinder_id, brewer_id, recipe_id,
@@ -65,9 +66,8 @@ router.get('/', (req, res) => {
   res.json(result);
 });
 
-router.post('/', (req, res) => {
-  const userId = req.headers['x-user-id'];
-  if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+router.post('/', (req: AuthRequest, res: Response) => {
+  const userId = req.userId;
   
   const { coffeeBeanId, batchId, grinderId, brewerId, recipeId, coffeeServerId, dose, grindSize,
           water, yield: yieldVal, temperature, brewTime, tds, extractionYield,
@@ -78,28 +78,27 @@ router.post('/', (req, res) => {
   // Convert empty strings to null for foreign key fields
   const toNullableId = (id: any) => (id && id !== '' && id !== 'none') ? id : null;
   
-  const result = db.prepare(`
+  const insertResult = db.prepare(`
     INSERT INTO brews (user_id, date, coffee_bean_id, batch_id, grinder_id, brewer_id, 
                        recipe_id, coffee_server_id, dose, grind_size, water, yield, temperature, brew_time, 
                        tds, extraction_yield, rating, comment, photo, favorite, template_notes)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(userId, date, toNullableId(coffeeBeanId), toNullableId(batchId), toNullableId(grinderId), 
          toNullableId(brewerId), toNullableId(recipeId), toNullableId(coffeeServerId), dose, grindSize, water, yieldVal, temperature,
-         brewTime, tds, extractionYield, rating, comment, photo, favorite ? 1 : 0,
+         brewTime, tds, extractionYield, rating, comment, photo || null, favorite ? 1 : 0,
          templateNotes ? JSON.stringify(templateNotes) : null);
   
   res.json({
-    id: String(result.lastInsertRowid), date, coffeeBeanId, batchId, grinderId, brewerId,
+    id: String(insertResult.lastInsertRowid), date, coffeeBeanId, batchId, grinderId, brewerId,
     recipeId, coffeeServerId, dose, grindSize, water, yield: yieldVal, temperature, brewTime, tds,
     extractionYield, rating, comment, photo, favorite: Boolean(favorite), templateNotes
   });
 });
 
-router.put('/:id', (req, res) => {
-  const userId = req.headers['x-user-id'];
-  if (!userId) return res.status(401).json({ error: 'Unauthorized' });
-  
+router.put('/:id', (req: AuthRequest, res: Response) => {
+  const userId = req.userId;
   const { id } = req.params;
+  
   const { coffeeBeanId, batchId, grinderId, brewerId, recipeId, coffeeServerId, dose, grindSize,
           water, yield: yieldVal, temperature, brewTime, tds, extractionYield,
           rating, comment, photo, favorite, templateNotes } = req.body;
@@ -115,15 +114,14 @@ router.put('/:id', (req, res) => {
     WHERE id = ? AND user_id = ?
   `).run(toNullableId(coffeeBeanId), toNullableId(batchId), toNullableId(grinderId), toNullableId(brewerId),
          toNullableId(recipeId), toNullableId(coffeeServerId), dose, grindSize, water, yieldVal, temperature, brewTime,
-         tds, extractionYield, rating, comment, photo, favorite ? 1 : 0,
+         tds, extractionYield, rating, comment, photo || null, favorite ? 1 : 0,
          templateNotes ? JSON.stringify(templateNotes) : null, id, userId);
   
   res.json({ success: true });
 });
 
-router.patch('/:id/favorite', (req, res) => {
-  const userId = req.headers['x-user-id'];
-  if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+router.patch('/:id/favorite', (req: AuthRequest, res: Response) => {
+  const userId = req.userId;
   
   db.prepare(`
     UPDATE brews SET favorite = NOT favorite WHERE id = ? AND user_id = ?
@@ -132,9 +130,8 @@ router.patch('/:id/favorite', (req, res) => {
   res.json({ success: true });
 });
 
-router.delete('/:id', (req, res) => {
-  const userId = req.headers['x-user-id'];
-  if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+router.delete('/:id', (req: AuthRequest, res: Response) => {
+  const userId = req.userId;
   
   db.prepare('DELETE FROM brews WHERE id = ? AND user_id = ?').run(req.params.id, userId);
   res.json({ success: true });

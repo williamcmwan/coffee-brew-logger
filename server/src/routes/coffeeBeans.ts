@@ -1,5 +1,7 @@
-import { Router } from 'express';
+import { Router, Response } from 'express';
 import { db } from '../db/schema.js';
+import { AuthRequest } from '../middleware/auth.js';
+import { coffeeBeanSchema } from '../middleware/validation.js';
 
 const router = Router();
 
@@ -33,9 +35,8 @@ interface BatchRow {
   is_active: number;
 }
 
-router.get('/', (req, res) => {
-  const userId = req.headers['x-user-id'];
-  if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+router.get('/', (req: AuthRequest, res: Response) => {
+  const userId = req.userId;
   
   const beans = db.prepare(`
     SELECT id, photo, name, roaster, country, region, altitude, varietal, 
@@ -84,21 +85,25 @@ router.get('/', (req, res) => {
   res.json(result);
 });
 
-router.post('/', (req, res) => {
-  const userId = req.headers['x-user-id'];
-  if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+router.post('/', (req: AuthRequest, res: Response) => {
+  const userId = req.userId;
+  
+  const result = coffeeBeanSchema.safeParse(req.body);
+  if (!result.success) {
+    return res.status(400).json({ error: result.error.issues[0]?.message || "Invalid input" });
+  }
   
   const { photo, name, roaster, country, region, altitude, varietal, process, 
-          roastLevel, roastFor, tastingNotes, url, favorite, lowStockThreshold, batches } = req.body;
+          roastLevel, roastFor, tastingNotes, url, favorite, lowStockThreshold, batches } = result.data;
   
-  const result = db.prepare(`
+  const insertResult = db.prepare(`
     INSERT INTO coffee_beans (user_id, photo, name, roaster, country, region, altitude, 
                               varietal, process, roast_level, roast_for, tasting_notes, url, favorite, low_stock_threshold)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(userId, photo, name, roaster, country, region, altitude, varietal, 
-         process, roastLevel, roastFor, tastingNotes, url, favorite ? 1 : 0, lowStockThreshold);
+  `).run(userId, photo || null, name, roaster, country, region, altitude, varietal, 
+         process, roastLevel, roastFor, tastingNotes, url || null, favorite ? 1 : 0, lowStockThreshold);
   
-  const beanId = result.lastInsertRowid;
+  const beanId = insertResult.lastInsertRowid;
   const insertedBatches: any[] = [];
   
   if (batches && batches.length > 0) {
@@ -123,11 +128,11 @@ router.post('/', (req, res) => {
   });
 });
 
-router.put('/:id', (req, res) => {
-  const userId = req.headers['x-user-id'];
-  if (!userId) return res.status(401).json({ error: 'Unauthorized' });
-  
+router.put('/:id', (req: AuthRequest, res: Response) => {
+  const userId = req.userId;
   const { id } = req.params;
+  
+  // Allow partial updates - don't validate, just extract fields
   const { photo, name, roaster, country, region, altitude, varietal, process, 
           roastLevel, roastFor, tastingNotes, url, favorite, lowStockThreshold, batches } = req.body;
   
@@ -138,8 +143,8 @@ router.put('/:id', (req, res) => {
              altitude = ?, varietal = ?, process = ?, roast_level = ?, roast_for = ?, tasting_notes = ?, 
              url = ?, favorite = ?, low_stock_threshold = ?
       WHERE id = ? AND user_id = ?
-    `).run(photo, name, roaster, country, region, altitude, varietal, process, 
-           roastLevel, roastFor, tastingNotes, url, favorite ? 1 : 0, lowStockThreshold, id, userId);
+    `).run(photo || null, name, roaster, country, region, altitude, varietal, process, 
+           roastLevel, roastFor, tastingNotes, url || null, favorite ? 1 : 0, lowStockThreshold, id, userId);
   }
   
   // Handle batches update - update existing batches in place to preserve IDs
@@ -179,17 +184,15 @@ router.put('/:id', (req, res) => {
   res.json({ success: true });
 });
 
-router.delete('/:id', (req, res) => {
-  const userId = req.headers['x-user-id'];
-  if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+router.delete('/:id', (req: AuthRequest, res: Response) => {
+  const userId = req.userId;
   
   db.prepare('DELETE FROM coffee_beans WHERE id = ? AND user_id = ?').run(req.params.id, userId);
   res.json({ success: true });
 });
 
-router.patch('/:id/favorite', (req, res) => {
-  const userId = req.headers['x-user-id'];
-  if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+router.patch('/:id/favorite', (req: AuthRequest, res: Response) => {
+  const userId = req.userId;
   
   db.prepare(`
     UPDATE coffee_beans SET favorite = NOT favorite WHERE id = ? AND user_id = ?

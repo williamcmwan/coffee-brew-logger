@@ -1,6 +1,8 @@
-import { Router } from 'express';
+import { Router, Response } from 'express';
 import fs from 'fs';
 import path from 'path';
+import { z } from 'zod';
+import { AuthRequest } from '../middleware/auth.js';
 
 const router = Router();
 
@@ -22,6 +24,7 @@ interface CoffeeBeanInfo {
 
 interface GeminiLogEntry {
   timestamp: string;
+  userId?: number;
   success: boolean;
   inputTokens?: number;
   outputTokens?: number;
@@ -45,20 +48,31 @@ function logGeminiCall(entry: GeminiLogEntry) {
   }
 }
 
-router.post('/analyze-coffee-bag', async (req, res) => {
+// Validation schema for AI request
+const analyzeRequestSchema = z.object({
+  images: z.array(z.string().max(10 * 1024 * 1024)) // Max 10MB per image base64
+    .min(1, 'At least one image is required')
+    .max(5, 'Maximum 5 images allowed'),
+});
+
+router.post('/analyze-coffee-bag', async (req: AuthRequest, res: Response) => {
   const timestamp = new Date().toISOString();
+  const userId = req.userId;
   
   try {
-    const { images } = req.body;
-    
-    if (!images || !Array.isArray(images) || images.length === 0) {
-      logGeminiCall({ timestamp, success: false, error: 'No images provided' });
-      return res.status(400).json({ error: 'At least one image is required' });
+    // Validate input
+    const result = analyzeRequestSchema.safeParse(req.body);
+    if (!result.success) {
+      const errorMessage = result.error.issues[0]?.message || 'Invalid input';
+      logGeminiCall({ timestamp, userId, success: false, error: errorMessage });
+      return res.status(400).json({ error: errorMessage });
     }
+    
+    const { images } = result.data;
 
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
-      logGeminiCall({ timestamp, success: false, error: 'API key not configured' });
+      logGeminiCall({ timestamp, userId, success: false, error: 'API key not configured' });
       return res.status(500).json({ error: 'Gemini API key not configured' });
     }
 
@@ -77,6 +91,11 @@ router.post('/analyze-coffee-bag', async (req, res) => {
           mimeType = matches[1];
           base64Data = matches[2];
         }
+      }
+      
+      // Validate MIME type
+      if (!['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(mimeType)) {
+        return res.status(400).json({ error: 'Invalid image type' });
       }
       
       parts.push({
@@ -114,7 +133,7 @@ Rules: Use "N/A" if unknown (except roastFor/roastDate/weight). roastDate from s
     if (!response.ok) {
       const errorText = await response.text();
       console.error('Gemini API error:', errorText);
-      logGeminiCall({ timestamp, success: false, error: `API error: ${response.status}` });
+      logGeminiCall({ timestamp, userId, success: false, error: `API error: ${response.status}` });
       return res.status(500).json({ error: 'Failed to analyze images' });
     }
 
@@ -127,7 +146,7 @@ Rules: Use "N/A" if unknown (except roastFor/roastDate/weight). roastDate from s
     // Extract the text response
     const textResponse = data.candidates?.[0]?.content?.parts?.[0]?.text;
     if (!textResponse) {
-      logGeminiCall({ timestamp, success: false, inputTokens, outputTokens, error: 'No response text' });
+      logGeminiCall({ timestamp, userId, success: false, inputTokens, outputTokens, error: 'No response text' });
       return res.status(500).json({ error: 'No response from AI' });
     }
 
@@ -153,6 +172,7 @@ Rules: Use "N/A" if unknown (except roastFor/roastDate/weight). roastDate from s
     // Log successful call
     logGeminiCall({
       timestamp,
+      userId,
       success: true,
       inputTokens,
       outputTokens,
@@ -163,7 +183,7 @@ Rules: Use "N/A" if unknown (except roastFor/roastDate/weight). roastDate from s
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : 'Unknown error';
     console.error('Error analyzing coffee bag:', error);
-    logGeminiCall({ timestamp, success: false, error: errorMsg });
+    logGeminiCall({ timestamp, userId, success: false, error: errorMsg });
     res.status(500).json({ error: 'Failed to analyze coffee bag images' });
   }
 });

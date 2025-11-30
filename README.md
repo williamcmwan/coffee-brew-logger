@@ -60,12 +60,30 @@ The application will be available at http://localhost:3003
 
 ### Environment Variables
 
-Add to the root `.env` file:
+Copy `.env.example` to `.env` and configure:
 
 ```bash
-# Gemini API Key for AI coffee bag scanning
-# Get your API key from: https://aistudio.google.com/app/apikey
+# Required: JWT secret for authentication (generate a secure random string)
+# Generate with: node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
+JWT_SECRET=your_secure_random_string_here
+
+# Required for Google Sign-In
+VITE_GOOGLE_CLIENT_ID=your_google_client_id
+GOOGLE_CLIENT_SECRET=your_google_client_secret
+
+# Optional: Allowed origins for CORS (comma-separated)
+ALLOWED_ORIGINS=http://localhost:5173,http://localhost:3003,https://your-domain.com
+
+# Optional: Gemini API Key for AI coffee bag scanning
 GEMINI_API_KEY=your_gemini_api_key_here
+
+# Optional: EmailJS for contact form
+VITE_EMAILJS_SERVICE_ID=your_service_id
+VITE_EMAILJS_TEMPLATE_ID=your_template_id
+VITE_EMAILJS_PUBLIC_KEY=your_public_key
+
+# Optional: reCAPTCHA for contact form
+VITE_RECAPTCHA_SITE_KEY=your_site_key
 ```
 
 ### Development
@@ -99,8 +117,20 @@ The client dev server runs on port 5173 and proxies API requests to the server o
 - **Export**: Export brew history to CSV or PDF
 - **Share**: Share brew details via native share or clipboard
 
+## Security Features
+
+- **JWT Authentication**: Secure token-based authentication with 7-day expiry
+- **Password Hashing**: Bcrypt with 12 rounds for secure password storage
+- **Google OAuth**: Server-side token verification for Google Sign-In
+- **Rate Limiting**: Protection against brute force attacks (20 attempts per 10 minutes for auth)
+- **CORS**: Configurable allowed origins
+- **Helmet**: Security headers (X-Content-Type-Options, X-Frame-Options, etc.)
+- **Input Validation**: Zod schemas for API input validation
+
 ## Tech Stack
 
 - **Frontend**: React, TypeScript, Vite, Tailwind CSS, shadcn/ui
 - **Backend**: Express, TypeScript, better-sqlite3
 - **Database**: SQLite
+- **Authentication**: JWT, bcrypt, Google OAuth
+- **Security**: Helmet, express-rate-limit, Zod validation

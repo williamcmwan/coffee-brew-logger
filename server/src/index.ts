@@ -4,6 +4,9 @@ import express from 'express';
 // Load .env from project root
 dotenv.config({ path: '../.env' });
 import cors from 'cors';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
+import cookieParser from 'cookie-parser';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
@@ -18,6 +21,7 @@ import brewTemplatesRoutes from './routes/brewTemplates.js';
 import uploadsRoutes from './routes/uploads.js';
 import coffeeServersRoutes from './routes/coffeeServers.js';
 import aiRoutes from './routes/ai.js';
+import { authMiddleware } from './middleware/auth.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = process.env.PORT || 3003;
@@ -40,22 +44,86 @@ initializeDatabase();
 
 const app = express();
 
-app.use(cors());
-app.use(express.json({ limit: '50mb' }));
+// Trust proxy - needed when behind reverse proxy (nginx, etc.) for rate limiting to work correctly
+app.set('trust proxy', 1);
 
-// API routes
+// Security middleware
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: 'cross-origin' },
+  contentSecurityPolicy: false, // Disable for SPA compatibility
+}));
+
+// CORS configuration - restrict to allowed origins
+const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',').map(o => o.trim()) || [
+  'http://localhost:5173',
+  'http://localhost:3003',
+  'https://coffeebrew.dpdns.org'
+];
+
+// In development, also allow IPv6 localhost variants
+if (process.env.NODE_ENV !== 'production') {
+  allowedOrigins.push('http://[::1]:5173', 'http://127.0.0.1:5173');
+}
+
+app.use(cors({
+  origin: (origin, callback) => {
+    // Allow requests with no origin (mobile apps, curl, same-origin, etc.)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    // In development, log blocked origins for debugging
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('CORS blocked origin:', origin);
+    }
+    callback(new Error('Not allowed by CORS'));
+  },
+  credentials: true,
+}));
+
+// Rate limiting for auth endpoints
+const authLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000, // 10 minutes
+  max: 20, // 20 attempts per window
+  message: { error: 'Too many attempts, please try again later' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// General API rate limiting
+const apiLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 100, // 100 requests per minute
+  message: { error: 'Too many requests, please slow down' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Reduced JSON body size limit
+app.use(express.json({ limit: '5mb' }));
+app.use(cookieParser());
+
+// Apply rate limiting
+app.use('/api/auth/login', authLimiter);
+app.use('/api/auth/signup', authLimiter);
+app.use('/api/auth/social', authLimiter);
+app.use('/api', apiLimiter);
+
+// Public routes (no auth required)
 app.use('/api/auth', authRoutes);
-app.use('/api/grinders', grindersRoutes);
-app.use('/api/brewers', brewersRoutes);
-app.use('/api/recipes', recipesRoutes);
-app.use('/api/coffee-beans', coffeeBeansRoutes);
-app.use('/api/brews', brewsRoutes);
-app.use('/api/brew-templates', brewTemplatesRoutes);
-app.use('/api/uploads', uploadsRoutes);
-app.use('/api/coffee-servers', coffeeServersRoutes);
-app.use('/api/ai', aiRoutes);
 
-// Serve uploaded images
+// Protected routes (auth required)
+app.use('/api/grinders', authMiddleware, grindersRoutes);
+app.use('/api/brewers', authMiddleware, brewersRoutes);
+app.use('/api/recipes', authMiddleware, recipesRoutes);
+app.use('/api/coffee-beans', authMiddleware, coffeeBeansRoutes);
+app.use('/api/brews', authMiddleware, brewsRoutes);
+app.use('/api/brew-templates', authMiddleware, brewTemplatesRoutes);
+app.use('/api/uploads', authMiddleware, uploadsRoutes);
+app.use('/api/coffee-servers', authMiddleware, coffeeServersRoutes);
+app.use('/api/ai', authMiddleware, aiRoutes);
+
+// Serve uploaded images (still public for sharing, but with random filenames)
 app.use('/uploads', express.static(uploadsDir));
 
 // Serve static files from client build

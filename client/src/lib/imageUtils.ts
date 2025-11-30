@@ -1,3 +1,5 @@
+import { getAuthToken } from './api';
+
 /**
  * Compresses an image file to reduce storage size
  * @param file - The image file to compress
@@ -68,7 +70,7 @@ export const compressImage = (
  * @param maxSizeMB - Maximum file size in MB
  * @returns boolean - True if valid
  */
-export const validateImageFile = (file: File, maxSizeMB: number = 10): { valid: boolean; error?: string } => {
+export const validateImageFile = (file: File, maxSizeMB: number = 5): { valid: boolean; error?: string } => {
   const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
   
   if (!validTypes.includes(file.type)) {
@@ -157,13 +159,21 @@ export const uploadImage = async (file: File): Promise<string> => {
   const formData = new FormData();
   formData.append('image', blob, `${Date.now()}.jpg`);
   
+  const headers: Record<string, string> = {};
+  const token = getAuthToken();
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  
   const response = await fetch('/api/uploads', {
     method: 'POST',
+    headers,
     body: formData,
   });
   
   if (!response.ok) {
-    throw new Error('Failed to upload image');
+    const error = await response.json().catch(() => ({ error: 'Failed to upload image' }));
+    throw new Error(error.error || 'Failed to upload image');
   }
   
   const data = await response.json();
@@ -179,7 +189,14 @@ export const deleteImage = async (url: string): Promise<void> => {
   const filename = url.split('/').pop();
   if (!filename) return;
   
+  const headers: Record<string, string> = {};
+  const token = getAuthToken();
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  
   await fetch(`/api/uploads/${filename}`, {
     method: 'DELETE',
+    headers,
   });
 };

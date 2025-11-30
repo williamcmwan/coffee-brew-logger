@@ -1,7 +1,9 @@
-import express from 'express';
+import express, { Response } from 'express';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
+import crypto from 'crypto';
+import { AuthRequest } from '../middleware/auth.js';
 
 const router = express.Router();
 
@@ -14,33 +16,52 @@ if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
 
-// Configure multer storage
+// Configure multer storage with secure random filenames
 const storage = multer.diskStorage({
   destination: (_req, _file, cb) => {
     cb(null, uploadsDir);
   },
   filename: (_req, _file, cb) => {
-    const uniqueName = `${Date.now()}-${Math.random().toString(36).substring(7)}.jpg`;
-    cb(null, uniqueName);
+    // Use cryptographically secure random filename to prevent enumeration
+    const randomName = crypto.randomBytes(16).toString('hex');
+    cb(null, `${randomName}.jpg`);
   },
 });
 
+// Allowed MIME types for images
+const ALLOWED_MIME_TYPES = [
+  'image/jpeg',
+  'image/jpg', 
+  'image/png',
+  'image/webp',
+];
+
 const upload = multer({
   storage,
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
+  limits: { 
+    fileSize: 5 * 1024 * 1024, // 5MB limit (reduced from 10MB)
+    files: 1, // Only allow 1 file per request
+  },
   fileFilter: (_req, file, cb) => {
-    // Accept image types and application/octet-stream (for blobs)
-    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'application/octet-stream'];
-    if (allowedTypes.includes(file.mimetype)) {
+    // Strict MIME type checking
+    if (ALLOWED_MIME_TYPES.includes(file.mimetype)) {
       cb(null, true);
+    } else if (file.mimetype === 'application/octet-stream') {
+      // For blobs, check the original filename extension
+      const ext = path.extname(file.originalname).toLowerCase();
+      if (['.jpg', '.jpeg', '.png', '.webp'].includes(ext)) {
+        cb(null, true);
+      } else {
+        cb(new Error('Invalid file type'));
+      }
     } else {
       cb(new Error('Invalid file type: ' + file.mimetype));
     }
   },
 });
 
-// Upload image
-router.post('/', upload.single('image'), (req, res) => {
+// Upload image - now requires authentication
+router.post('/', upload.single('image'), (req: AuthRequest, res: Response) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'No image uploaded' });
@@ -54,14 +75,26 @@ router.post('/', upload.single('image'), (req, res) => {
   }
 });
 
-// Delete image
-router.delete('/:filename', (req, res) => {
+// Delete image - requires authentication
+router.delete('/:filename', (req: AuthRequest, res: Response) => {
   try {
     const { filename } = req.params;
+    
+    // Strict filename validation - only allow hex characters and .jpg extension
+    if (!/^[a-f0-9]{32}\.jpg$/.test(filename)) {
+      return res.status(400).json({ error: 'Invalid filename format' });
+    }
     
     // Sanitize filename to prevent directory traversal
     const sanitizedFilename = path.basename(filename);
     const filePath = path.join(uploadsDir, sanitizedFilename);
+    
+    // Verify the resolved path is within uploads directory
+    const resolvedPath = path.resolve(filePath);
+    const resolvedUploadsDir = path.resolve(uploadsDir);
+    if (!resolvedPath.startsWith(resolvedUploadsDir)) {
+      return res.status(400).json({ error: 'Invalid file path' });
+    }
     
     if (fs.existsSync(filePath)) {
       fs.unlinkSync(filePath);

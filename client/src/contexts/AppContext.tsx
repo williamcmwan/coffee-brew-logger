@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
-import { api } from "@/lib/api";
+import { api, setAuthToken, clearAuth, getAuthToken } from "@/lib/api";
 
 export interface User {
   id: number;
@@ -133,7 +133,7 @@ interface AppContextType {
   user: User | null;
   login: (email: string, password: string) => Promise<void>;
   signup: (email: string, password: string, name: string) => Promise<void>;
-  socialLogin: (provider: 'google' | 'apple', providerId: string, email: string, name?: string, avatarUrl?: string) => Promise<void>;
+  socialLogin: (provider: 'google' | 'apple', idToken: string) => Promise<void>;
   logout: () => void;
   grinders: Grinder[];
   addGrinder: (grinder: Omit<Grinder, "id">) => Promise<void>;
@@ -174,8 +174,8 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 const getInitialUser = (): User | null => {
   try {
     const storedUser = localStorage.getItem("user");
-    const storedUserId = localStorage.getItem("userId");
-    if (storedUser && storedUserId) {
+    const storedToken = getAuthToken();
+    if (storedUser && storedToken) {
       return JSON.parse(storedUser);
     }
   } catch (e) {
@@ -216,6 +216,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setCoffeeServers(serversData);
     } catch (error) {
       console.error('Failed to load data:', error);
+      // If we get an auth error, clear the user state
+      if (error instanceof Error && error.message.includes('Session expired')) {
+        setUser(null);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -231,23 +235,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const login = async (email: string, password: string) => {
     const userData = await api.auth.login(email, password);
-    setUser(userData);
-    localStorage.setItem("user", JSON.stringify(userData));
+    const userWithoutToken = { ...userData };
+    delete (userWithoutToken as any).token;
+    setUser(userWithoutToken);
+    localStorage.setItem("user", JSON.stringify(userWithoutToken));
     localStorage.setItem("userId", String(userData.id));
     await loadData();
   };
 
   const signup = async (email: string, password: string, name: string) => {
     const userData = await api.auth.signup(email, password, name);
-    setUser(userData);
-    localStorage.setItem("user", JSON.stringify(userData));
+    const userWithoutToken = { ...userData };
+    delete (userWithoutToken as any).token;
+    setUser(userWithoutToken);
+    localStorage.setItem("user", JSON.stringify(userWithoutToken));
     localStorage.setItem("userId", String(userData.id));
   };
 
-  const socialLogin = async (provider: 'google' | 'apple', providerId: string, email: string, name?: string, avatarUrl?: string) => {
-    const userData = await api.auth.social(provider, providerId, email, name, avatarUrl);
-    setUser(userData);
-    localStorage.setItem("user", JSON.stringify(userData));
+  const socialLogin = async (provider: 'google' | 'apple', idToken: string) => {
+    const userData = await api.auth.social(provider, idToken);
+    const userWithoutToken = { ...userData };
+    delete (userWithoutToken as any).token;
+    setUser(userWithoutToken);
+    localStorage.setItem("user", JSON.stringify(userWithoutToken));
     localStorage.setItem("userId", String(userData.id));
     await loadData();
   };
@@ -261,8 +271,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setBrews([]);
     setBrewTemplates([]);
     setCoffeeServers([]);
-    localStorage.removeItem("user");
-    localStorage.removeItem("userId");
+    clearAuth();
   };
 
   const addGrinder = async (grinder: Omit<Grinder, "id">) => {

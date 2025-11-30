@@ -1,16 +1,50 @@
 const API_BASE = '/api';
 
+// Token management
+let authToken: string | null = localStorage.getItem('authToken');
+
+export function setAuthToken(token: string | null) {
+  authToken = token;
+  if (token) {
+    localStorage.setItem('authToken', token);
+  } else {
+    localStorage.removeItem('authToken');
+  }
+}
+
+export function getAuthToken(): string | null {
+  return authToken;
+}
+
+export function clearAuth() {
+  authToken = null;
+  localStorage.removeItem('authToken');
+  localStorage.removeItem('user');
+  localStorage.removeItem('userId');
+}
+
 async function request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-  const userId = localStorage.getItem('userId');
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...options.headers as Record<string, string>,
+  };
+  
+  // Add auth token if available
+  if (authToken) {
+    headers['Authorization'] = `Bearer ${authToken}`;
+  }
   
   const response = await fetch(`${API_BASE}${endpoint}`, {
     ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(userId && { 'x-user-id': userId }),
-      ...options.headers,
-    },
+    headers,
   });
+  
+  if (response.status === 401) {
+    // Token expired or invalid - clear auth state
+    clearAuth();
+    window.location.href = '/login';
+    throw new Error('Session expired. Please log in again.');
+  }
   
   if (!response.ok) {
     const error = await response.json().catch(() => ({ error: 'Request failed' }));
@@ -26,25 +60,44 @@ export interface AuthUser {
   name: string;
   authProvider?: string;
   avatarUrl?: string;
+  token?: string;
 }
 
 export const api = {
   auth: {
-    login: (email: string, password: string) =>
-      request<AuthUser>('/auth/login', {
+    login: async (email: string, password: string): Promise<AuthUser> => {
+      const response = await request<AuthUser>('/auth/login', {
         method: 'POST',
         body: JSON.stringify({ email, password }),
-      }),
-    signup: (email: string, password: string, name: string) =>
-      request<AuthUser>('/auth/signup', {
+      });
+      if (response.token) {
+        setAuthToken(response.token);
+      }
+      return response;
+    },
+    signup: async (email: string, password: string, name: string): Promise<AuthUser> => {
+      const response = await request<AuthUser>('/auth/signup', {
         method: 'POST',
         body: JSON.stringify({ email, password, name }),
-      }),
-    social: (provider: 'google' | 'apple', providerId: string, email: string, name?: string, avatarUrl?: string) =>
-      request<AuthUser>('/auth/social', {
+      });
+      if (response.token) {
+        setAuthToken(response.token);
+      }
+      return response;
+    },
+    social: async (provider: 'google' | 'apple', idToken: string): Promise<AuthUser> => {
+      const response = await request<AuthUser>('/auth/social', {
         method: 'POST',
-        body: JSON.stringify({ provider, providerId, email, name, avatarUrl }),
-      }),
+        body: JSON.stringify({ provider, idToken }),
+      });
+      if (response.token) {
+        setAuthToken(response.token);
+      }
+      return response;
+    },
+    logout: () => {
+      clearAuth();
+    },
   },
   
   grinders: {
@@ -97,6 +150,32 @@ export const api = {
     create: (data: any) => request<any>('/coffee-servers', { method: 'POST', body: JSON.stringify(data) }),
     update: (id: string, data: any) => request<any>(`/coffee-servers/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
     delete: (id: string) => request<any>(`/coffee-servers/${id}`, { method: 'DELETE' }),
+  },
+  
+  uploads: {
+    upload: async (file: Blob): Promise<{ url: string; filename: string }> => {
+      const formData = new FormData();
+      formData.append('image', file);
+      
+      const headers: Record<string, string> = {};
+      if (authToken) {
+        headers['Authorization'] = `Bearer ${authToken}`;
+      }
+      
+      const response = await fetch(`${API_BASE}/uploads`, {
+        method: 'POST',
+        headers,
+        body: formData,
+      });
+      
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ error: 'Upload failed' }));
+        throw new Error(error.error || 'Upload failed');
+      }
+      
+      return response.json();
+    },
+    delete: (filename: string) => request<any>(`/uploads/${filename}`, { method: 'DELETE' }),
   },
   
   ai: {

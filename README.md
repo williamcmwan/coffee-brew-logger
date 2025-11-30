@@ -23,6 +23,40 @@ A coffee brewing journal application to track your brews, recipes, equipment, an
 - Node.js 18+
 - npm
 
+### Installing Node.js on Linux
+
+Using NodeSource (recommended for latest LTS):
+
+```bash
+# Download and run NodeSource setup script (Node.js 20 LTS)
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+
+# Install Node.js (includes npm)
+sudo apt-get install -y nodejs
+
+# Verify installation
+node --version
+npm --version
+```
+
+Alternative using nvm (Node Version Manager):
+
+```bash
+# Install nvm
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash
+
+# Reload shell
+source ~/.bashrc
+
+# Install and use Node.js 20
+nvm install 20
+nvm use 20
+
+# Verify installation
+node --version
+npm --version
+```
+
 ### Deployment
 
 ```bash

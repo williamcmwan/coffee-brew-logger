@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Camera, Upload, X } from "lucide-react";
@@ -18,6 +18,11 @@ export default function ImageUpload({ value, onChange, label = "Photo", classNam
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
+
+  // Sync preview with value prop when it changes externally
+  useEffect(() => {
+    setPreview(value || "");
+  }, [value]);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -119,65 +124,74 @@ export default function ImageUpload({ value, onChange, label = "Photo", classNam
     <div className={className}>
       <Label className="mb-2 block">{label}</Label>
       
-      {preview ? (
-        <div className="relative">
-          <img
-            src={preview}
-            alt="Preview"
-            className="w-full h-48 object-cover rounded-lg border border-border"
-          />
+      <div className="space-y-2">
+        <div className="grid grid-cols-2 gap-2">
           <Button
             type="button"
-            variant="destructive"
-            size="icon"
-            className="absolute top-2 right-2"
-            onClick={handleRemove}
+            variant="outline"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isLoading}
+            className="w-full"
           >
-            <X className="h-4 w-4" />
+            <Upload className="mr-2 h-4 w-4" />
+            {isLoading ? "Processing..." : "Upload"}
+          </Button>
+          
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => cameraInputRef.current?.click()}
+            disabled={isLoading}
+            className="w-full"
+          >
+            <Camera className="mr-2 h-4 w-4" />
+            {isLoading ? "Processing..." : "Camera"}
           </Button>
         </div>
-      ) : (
-        <div className="space-y-2">
-          <div className="grid grid-cols-2 gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={isLoading}
-              className="w-full"
-            >
-              <Upload className="mr-2 h-4 w-4" />
-              {isLoading ? "Processing..." : "Upload"}
-            </Button>
-            
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => cameraInputRef.current?.click()}
-              disabled={isLoading}
-              className="w-full"
-            >
-              <Camera className="mr-2 h-4 w-4" />
-              {isLoading ? "Processing..." : "Camera"}
-            </Button>
-          </div>
-          
-          <div 
-            className={`w-full h-48 rounded-lg border-2 border-dashed flex items-center justify-center transition-colors ${
-              isDragging 
-                ? 'border-primary bg-primary/10' 
-                : 'border-border bg-muted/20'
-            }`}
-            onDrop={handleDrop}
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-          >
+        
+        <div 
+          className={`relative w-full h-24 rounded-lg border-2 border-dashed flex items-center justify-center transition-colors cursor-pointer overflow-hidden ${
+            isDragging 
+              ? 'border-primary bg-primary/10' 
+              : 'border-border bg-muted/20'
+          }`}
+          onDrop={handleDrop}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onClick={() => fileInputRef.current?.click()}
+        >
+          {preview ? (
+            <>
+              <img
+                src={preview}
+                alt="Preview"
+                className="absolute inset-0 w-full h-full object-cover opacity-40"
+              />
+              <div className="relative z-10 flex items-center gap-2">
+                <p className="text-sm text-foreground font-medium">
+                  {isDragging ? 'Drop to replace' : 'Drop or click to replace'}
+                </p>
+                <Button
+                  type="button"
+                  variant="destructive"
+                  size="icon"
+                  className="h-6 w-6"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleRemove();
+                  }}
+                >
+                  <X className="h-3 w-3" />
+                </Button>
+              </div>
+            </>
+          ) : (
             <p className="text-sm text-muted-foreground">
-              {isDragging ? 'Drop image here' : 'Drag & drop or click to upload'}
+              {isDragging ? 'Drop image here' : 'Drag & drop image here'}
             </p>
-          </div>
+          )}
         </div>
-      )}
+      </div>
 
       <input
         ref={fileInputRef}

@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { db } from '../db/schema.js';
+import { seedUserDefaults } from '../utils/seedUserDefaults.js';
 
 const router = Router();
 
@@ -51,7 +52,10 @@ router.post('/signup', (req, res) => {
   const result = db.prepare('INSERT INTO users (email, password, name, auth_provider) VALUES (LOWER(?), ?, ?, ?)')
     .run(email, password, name, 'email');
   
-  res.json({ id: result.lastInsertRowid, email: email.toLowerCase(), name, authProvider: 'email' });
+  const newUserId = Number(result.lastInsertRowid);
+  seedUserDefaults(newUserId);
+  
+  res.json({ id: newUserId, email: email.toLowerCase(), name, authProvider: 'email' });
 });
 
 // Social login endpoint - handles both Google and Apple
@@ -99,7 +103,10 @@ router.post('/social', (req, res) => {
   const result = db.prepare('INSERT INTO users (email, name, auth_provider, provider_id, avatar_url) VALUES (LOWER(?), ?, ?, ?, ?)')
     .run(email, displayName, provider, providerId, avatarUrl || null);
   
-  res.json({ id: result.lastInsertRowid, email: email.toLowerCase(), name: displayName, authProvider: provider, avatarUrl });
+  const newUserId = Number(result.lastInsertRowid);
+  seedUserDefaults(newUserId);
+  
+  res.json({ id: newUserId, email: email.toLowerCase(), name: displayName, authProvider: provider, avatarUrl });
 });
 
 export default router;

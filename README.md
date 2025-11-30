@@ -58,6 +58,16 @@ The application will be available at http://localhost:3003
 ./scripts/commit-push.sh
 ```
 
+### Environment Variables
+
+Add to the root `.env` file:
+
+```bash
+# Gemini API Key for AI coffee bag scanning
+# Get your API key from: https://aistudio.google.com/app/apikey
+GEMINI_API_KEY=your_gemini_api_key_here
+```
+
 ### Development
 
 For development, run the client and server separately:
@@ -76,8 +86,9 @@ The client dev server runs on port 5173 and proxies API requests to the server o
 
 - **Brew Tracking**: Log brews with detailed parameters (dose, grind, water, temperature, time)
 - **Coffee Beans**: Manage beans with batches, track remaining weight, filter by roast type (espresso/pour-over)
+- **AI Coffee Bag Scanner**: Take photos of coffee bags (front/back) to auto-fill bean information using Gemini AI
 - **Recipes**: Create and save recipes with process steps for guided brewing
-- **Equipment**: Track grinders, brewers, and coffee servers
+- **Equipment**: Track grinders, brewers, and coffee servers with photo uploads
 - **Coffee Servers**: Manage servers with empty weight for automatic yield calculation
 - **Brew History**: View, edit, and delete past brews with filtering and sorting
 - **Analytics**: View brewing statistics and trends

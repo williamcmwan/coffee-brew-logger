@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AppProvider, useApp } from "./contexts/AppContext";
+import CookieConsent from "./components/CookieConsent";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Brew from "./pages/Brew";
@@ -19,6 +20,8 @@ import BrewTimer from "./pages/BrewTimer";
 import BrewTemplates from "./pages/BrewTemplates";
 import Inventory from "./pages/Inventory";
 import CoffeeServers from "./pages/CoffeeServers";
+import Privacy from "./pages/Privacy";
+import Contact from "./pages/Contact";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -150,8 +153,18 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
+            <Route path="/privacy" element={<Privacy />} />
+            <Route
+              path="/contact"
+              element={
+                <ProtectedRoute>
+                  <Contact />
+                </ProtectedRoute>
+              }
+            />
             <Route path="*" element={<NotFound />} />
           </Routes>
+          <CookieConsent />
         </BrowserRouter>
       </AppProvider>
     </TooltipProvider>

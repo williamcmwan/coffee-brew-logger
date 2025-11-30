@@ -204,6 +204,16 @@ export default function BrewTimerContent({
     playBellSound();
   }, [playBellSound]);
 
+  // Find next step with duration > 0, or return the final step
+  const findNextActiveStep = useCallback((fromIndex: number): number => {
+    for (let i = fromIndex; i < steps.length; i++) {
+      if (steps[i].duration > 0 || i === steps.length - 1) {
+        return i;
+      }
+    }
+    return steps.length - 1;
+  }, [steps]);
+
   // Timer countdown logic
   useEffect(() => {
     if (!isRunning || timeRemaining <= 0) return;
@@ -220,16 +230,17 @@ export default function BrewTimerContent({
           playBellSound();
           
           if (currentStepIndex < steps.length - 1) {
-            const nextIndex = currentStepIndex + 1;
-            const nextStep = steps[nextIndex];
+            // Find next step with duration > 0, skipping info-only steps
+            const nextActiveIndex = findNextActiveStep(currentStepIndex + 1);
+            const nextStep = steps[nextActiveIndex];
             
             toast({
               title: nextStep.title,
               description: nextStep.description,
-              duration: 5000,
+              duration: 1000,
             });
             
-            setCurrentStepIndex(nextIndex);
+            setCurrentStepIndex(nextActiveIndex);
             
             if (nextStep.duration === 0) {
               setIsRunning(false);
@@ -248,18 +259,28 @@ export default function BrewTimerContent({
     }, 1000);
     
     return () => clearInterval(interval);
-  }, [isRunning, timeRemaining, currentStepIndex, steps, playTickSound, playBellSound]);
+  }, [isRunning, timeRemaining, currentStepIndex, steps, playTickSound, playBellSound, findNextActiveStep]);
 
   const handleStart = () => {
     // Unlock AudioContext on user interaction (required for mobile browsers)
     getAudioContext();
     
-    // Skip preparation step if at index 0
-    if (currentStepIndex === 0 && steps.length > 1) {
-      setCurrentStepIndex(1);
-      setTimeRemaining(steps[1].duration);
+    // Skip any steps with duration 0 (info-only steps)
+    const nextActiveIndex = findNextActiveStep(currentStepIndex === 0 ? 1 : currentStepIndex);
+    const nextStep = steps[nextActiveIndex];
+    
+    if (nextActiveIndex !== currentStepIndex) {
+      setCurrentStepIndex(nextActiveIndex);
+      setTimeRemaining(nextStep?.duration || 0);
     }
-    setIsRunning(true);
+    
+    // If the step has no duration, mark as complete
+    if (nextStep?.duration === 0) {
+      setIsComplete(true);
+    } else {
+      setIsRunning(true);
+    }
+    
     playNotificationSound();
   };
 

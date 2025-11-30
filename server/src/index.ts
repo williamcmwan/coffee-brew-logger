@@ -1,4 +1,8 @@
+import dotenv from 'dotenv';
 import express from 'express';
+
+// Load .env from project root
+dotenv.config({ path: '../.env' });
 import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -13,6 +17,7 @@ import brewsRoutes from './routes/brews.js';
 import brewTemplatesRoutes from './routes/brewTemplates.js';
 import uploadsRoutes from './routes/uploads.js';
 import coffeeServersRoutes from './routes/coffeeServers.js';
+import aiRoutes from './routes/ai.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = process.env.PORT || 3003;
@@ -48,6 +53,7 @@ app.use('/api/brews', brewsRoutes);
 app.use('/api/brew-templates', brewTemplatesRoutes);
 app.use('/api/uploads', uploadsRoutes);
 app.use('/api/coffee-servers', coffeeServersRoutes);
+app.use('/api/ai', aiRoutes);
 
 // Serve uploaded images
 app.use('/uploads', express.static(uploadsDir));

@@ -2,13 +2,17 @@ import { useNavigate } from "react-router-dom";
 import { useApp } from "@/contexts/AppContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Coffee, Settings, Plus, History, TrendingUp, GitCompare, Package, Star } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Coffee, Settings, Plus, History, TrendingUp, GitCompare, Package, Star, Sparkles, MessageCircle } from "lucide-react";
 
 export default function Dashboard() {
-  const { user, brews, coffeeBeans, recipes, logout } = useApp();
+  const { user, brews, coffeeBeans, recipes, grinders, brewers, logout } = useApp();
   const navigate = useNavigate();
 
   const recentBrews = brews.slice(0, 5);
+  
+  // Check if user is new (no beans added yet - they need to set up their own beans)
+  const isNewUser = coffeeBeans.length === 0;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-secondary/20 to-background">
@@ -23,9 +27,19 @@ export default function Dashboard() {
               <p className="text-sm text-muted-foreground">Ready to brew?</p>
             </div>
           </div>
-          <Button variant="ghost" size="icon" onClick={() => navigate("/settings")}>
-            <Settings className="h-5 w-5" />
-          </Button>
+          <div className="flex items-center gap-2">
+            <a href="https://www.buymeacoffee.com/wcmw" target="_blank" rel="noopener noreferrer">
+              <img 
+                src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" 
+                alt="Buy Me A Coffee" 
+                className="h-8 w-auto"
+              />
+            </a>
+            <Button variant="ghost" onClick={() => navigate("/contact")} className="flex items-center gap-1">
+              <MessageCircle className="h-6 w-6" />
+              <span className="text-sm">Contact</span>
+            </Button>
+          </div>
         </div>
 
         <Card className="bg-gradient-to-br from-primary to-primary/80 text-primary-foreground border-0">
@@ -106,8 +120,23 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
+        {isNewUser && (
+          <Alert className="border-primary/50 bg-primary/5">
+            <Sparkles className="h-4 w-4 text-primary" />
+            <AlertTitle className="text-primary">Welcome to Brew Journal!</AlertTitle>
+            <AlertDescription className="text-sm">
+              Get started by adding your coffee beans and equipment in Settings below.
+            </AlertDescription>
+          </Alert>
+        )}
+
         <div className="grid grid-cols-4 gap-3 !mt-3">
-          <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate("/settings")}>
+          <Card 
+            className={`hover:shadow-md transition-all cursor-pointer ${
+              isNewUser ? 'ring-2 ring-primary ring-offset-2 animate-pulse' : ''
+            }`} 
+            onClick={() => navigate("/settings")}
+          >
             <CardContent className="p-4 text-center">
               <Settings className="h-6 w-6 mx-auto mb-1 text-primary" />
               <p className="font-medium text-xs">Settings</p>

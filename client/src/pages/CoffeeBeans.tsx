@@ -61,6 +61,7 @@ export default function CoffeeBeans() {
     if (filter === "favorites") return b.favorite;
     if (filter === "espresso") return b.roastFor === "espresso";
     if (filter === "pour-over") return b.roastFor === "pour-over";
+    if (filter === "available") return b.batches.reduce((sum, batch) => sum + (batch.currentWeight || 0), 0) > 0;
     return true;
   });
 
@@ -88,6 +89,7 @@ export default function CoffeeBeans() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Beans</SelectItem>
+                <SelectItem value="available">Available Only</SelectItem>
                 <SelectItem value="favorites">Favorites Only</SelectItem>
                 <SelectItem value="espresso">For Espresso</SelectItem>
                 <SelectItem value="pour-over">For Pour-over</SelectItem>
@@ -101,7 +103,7 @@ export default function CoffeeBeans() {
             <CardContent className="p-12 text-center">
               <Bean className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
               <p className="text-muted-foreground mb-4">
-                {filter === "favorites" ? "No favorite beans yet" : "No coffee beans added yet"}
+                {filter === "favorites" ? "No favorite beans yet" : filter === "available" ? "No beans with remaining coffee" : "No coffee beans added yet"}
               </p>
               <Button onClick={handleAdd}>Add Your First Coffee Bean</Button>
             </CardContent>

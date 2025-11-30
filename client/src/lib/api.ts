@@ -98,4 +98,26 @@ export const api = {
     update: (id: string, data: any) => request<any>(`/coffee-servers/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
     delete: (id: string) => request<any>(`/coffee-servers/${id}`, { method: 'DELETE' }),
   },
+  
+  ai: {
+    analyzeCoffeeBag: (images: string[]) =>
+      request<{
+        name: string;
+        roaster: string;
+        country: string;
+        region: string;
+        altitude: string;
+        varietal: string;
+        process: string;
+        roastLevel: string;
+        roastFor: string;
+        tastingNotes: string;
+        url: string;
+        roastDate: string;
+        weight: number;
+      }>('/ai/analyze-coffee-bag', {
+        method: 'POST',
+        body: JSON.stringify({ images }),
+      }),
+  },
 };

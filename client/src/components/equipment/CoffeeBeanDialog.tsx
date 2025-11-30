@@ -10,9 +10,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, Sparkles, ChevronDown, ChevronRight } from "lucide-react";
 import type { CoffeeBean, CoffeeBatch } from "@/contexts/AppContext";
-import ImageUpload from "@/components/ImageUpload";
+import { CoffeeBagScanner } from "./CoffeeBagScanner";
+import { uploadImage } from "@/lib/imageUtils";
 
 const coffeeBeanSchema = z.object({
   name: z.string().trim().min(1, "Name is required").max(100),
@@ -22,10 +23,10 @@ const coffeeBeanSchema = z.object({
   altitude: z.string().trim().max(50).optional().or(z.literal("")),
   varietal: z.string().trim().min(1, "Varietal is required").max(100),
   process: z.string().trim().min(1, "Process is required").max(100),
-  roastLevel: z.string().trim().min(1, "Roast level is required").max(50),
+  roastLevel: z.string().trim().max(50).optional().or(z.literal("")),
   roastFor: z.enum(["pour-over", "espresso", ""]).optional(),
   tastingNotes: z.string().trim().max(500).optional().or(z.literal("")),
-  url: z.string().trim().url("Must be a valid URL").optional().or(z.literal("")),
+  url: z.string().trim().max(500).optional().or(z.literal("")),
   photo: z.string().optional().or(z.literal("")),
 });
 
@@ -38,10 +39,19 @@ interface CoffeeBeanDialogProps {
   isCloning?: boolean;
 }
 
+// State for adding batch to existing bean
+interface PendingBatchAdd {
+  bean: CoffeeBean;
+  batch: CoffeeBatch;
+}
+
 export function CoffeeBeanDialog({ open, onOpenChange, bean, isCloning = false }: CoffeeBeanDialogProps) {
-  const { addCoffeeBean, updateCoffeeBean } = useApp();
+  const { addCoffeeBean, updateCoffeeBean, coffeeBeans } = useApp();
   const { toast } = useToast();
   const [batches, setBatches] = useState<CoffeeBatch[]>([]);
+  const [scannerOpen, setScannerOpen] = useState(false);
+  const [pendingBatchAdd, setPendingBatchAdd] = useState<PendingBatchAdd | null>(null);
+  const [showEmptyBatches, setShowEmptyBatches] = useState(false);
 
   const {
     register,
@@ -109,8 +119,134 @@ export function CoffeeBeanDialog({ open, onOpenChange, bean, isCloning = false }
     ]);
   };
 
+  const handleScanComplete = async (data: {
+    name: string;
+    roaster: string;
+    country: string;
+    region: string;
+    altitude: string;
+    varietal: string;
+    process: string;
+    roastLevel: string;
+    roastFor: string;
+    tastingNotes: string;
+    url: string;
+    photo: string;
+    roastDate: string;
+    weight: number;
+  }) => {
+    const today = new Date().toISOString().split("T")[0];
+    const roastDate = data.roastDate && data.roastDate.match(/^\d{4}-\d{2}-\d{2}$/) ? data.roastDate : today;
+    const weight = data.weight && data.weight > 0 ? data.weight : 250;
+    
+    // Check for existing bean with same name, roaster (partial match), and country
+    const normalizeStr = (s: string) => s.toLowerCase().trim().replace(/\s+/g, ' ');
+    const roasterMatches = (existing: string, scanned: string) => {
+      const a = normalizeStr(existing);
+      const b = normalizeStr(scanned);
+      // Exact match or one contains the other (partial match)
+      return a === b || a.includes(b) || b.includes(a);
+    };
+    const existingBean = coffeeBeans.find(b => 
+      normalizeStr(b.name) === normalizeStr(data.name || '') &&
+      roasterMatches(b.roaster, data.roaster || '') &&
+      normalizeStr(b.country) === normalizeStr(data.country || '')
+    );
+    
+    if (existingBean) {
+      // Show review dialog for adding batch to existing bean
+      const newBatch: CoffeeBatch = {
+        id: Date.now().toString(),
+        price: 0,
+        roastDate: roastDate,
+        weight: weight,
+        currentWeight: weight,
+        purchaseDate: today,
+        isActive: true,
+        notes: "",
+      };
+      setPendingBatchAdd({ bean: existingBean, batch: newBatch });
+      return;
+    }
+    
+    // No existing bean found - fill form for new bean
+    setValue("name", data.name || "");
+    setValue("roaster", data.roaster || "");
+    setValue("country", data.country || "");
+    setValue("region", data.region || "");
+    setValue("altitude", data.altitude || "");
+    setValue("varietal", data.varietal || "");
+    setValue("process", data.process || "");
+    setValue("roastLevel", data.roastLevel || "");
+    setValue("roastFor", (data.roastFor as "pour-over" | "espresso" | "") || "");
+    setValue("tastingNotes", data.tastingNotes || "");
+    setValue("url", data.url || "");
+    
+    // Upload photo to server and set URL
+    if (data.photo) {
+      try {
+        const blob = await fetch(data.photo).then(r => r.blob());
+        const file = new File([blob], 'coffee-bag.jpg', { type: 'image/jpeg' });
+        const photoUrl = await uploadImage(file);
+        setValue("photo", photoUrl);
+      } catch {
+        setValue("photo", "");
+      }
+    } else {
+      setValue("photo", "");
+    }
+    
+    setBatches([{
+      id: Date.now().toString(),
+      price: 0,
+      roastDate: roastDate,
+      weight: weight,
+      currentWeight: weight,
+      purchaseDate: today,
+      isActive: true,
+      notes: "",
+    }]);
+  };
+
   const updateBatch = (id: string, field: keyof CoffeeBatch, value: any) => {
     setBatches(batches.map((b) => (b.id === id ? { ...b, [field]: value } : b)));
+  };
+
+  const updatePendingBatch = (field: keyof CoffeeBatch, value: any) => {
+    if (pendingBatchAdd) {
+      setPendingBatchAdd({
+        ...pendingBatchAdd,
+        batch: { ...pendingBatchAdd.batch, [field]: value }
+      });
+    }
+  };
+
+  const confirmAddBatch = async () => {
+    if (!pendingBatchAdd) return;
+    
+    try {
+      // Update weight to match currentWeight for new batch
+      const batchToAdd = {
+        ...pendingBatchAdd.batch,
+        currentWeight: pendingBatchAdd.batch.weight
+      };
+      
+      await updateCoffeeBean(pendingBatchAdd.bean.id, {
+        batches: [...pendingBatchAdd.bean.batches, batchToAdd]
+      });
+      toast({
+        title: "Batch added",
+        description: `New batch added to "${pendingBatchAdd.bean.name}"`,
+      });
+      setPendingBatchAdd(null);
+      onOpenChange(false);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to add batch",
+        variant: "destructive",
+      });
+    }
   };
 
   const removeBatch = (id: string) => {
@@ -141,10 +277,25 @@ export function CoffeeBeanDialog({ open, onOpenChange, bean, isCloning = false }
   };
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{isCloning ? "Clone Coffee Bean" : bean ? "Edit Coffee Bean" : "Add Coffee Bean"}</DialogTitle>
+          <div className="flex items-center justify-between">
+            <DialogTitle>{isCloning ? "Clone Coffee Bean" : bean ? "Edit Coffee Bean" : "Add Coffee Bean"}</DialogTitle>
+            {!bean && !isCloning && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setScannerOpen(true)}
+                className="ml-2"
+              >
+                <Sparkles className="mr-2 h-4 w-4" />
+                Scan Bag
+              </Button>
+            )}
+          </div>
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="space-y-2">
@@ -193,9 +344,8 @@ export function CoffeeBeanDialog({ open, onOpenChange, bean, isCloning = false }
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="roastLevel">Roast Level *</Label>
+              <Label htmlFor="roastLevel">Roast Level</Label>
               <Input id="roastLevel" {...register("roastLevel")} placeholder="Light" />
-              {errors.roastLevel && <p className="text-sm text-destructive">{errors.roastLevel.message}</p>}
             </div>
           </div>
 
@@ -228,13 +378,16 @@ export function CoffeeBeanDialog({ open, onOpenChange, bean, isCloning = false }
             {errors.url && <p className="text-sm text-destructive">{errors.url.message}</p>}
           </div>
 
-          <div className="space-y-2">
-            <ImageUpload
-              value={photo || ""}
-              onChange={(dataUrl) => setValue("photo", dataUrl)}
-              label="Photo"
-            />
-          </div>
+          {photo && (
+            <div className="space-y-2">
+              <Label>Photo</Label>
+              <img
+                src={photo}
+                alt="Coffee bag"
+                className="w-full h-48 object-cover rounded-lg border"
+              />
+            </div>
+          )}
 
           <div className="space-y-2">
             <div className="flex items-center justify-between">
@@ -244,18 +397,32 @@ export function CoffeeBeanDialog({ open, onOpenChange, bean, isCloning = false }
                 Add Batch
               </Button>
             </div>
-            {batches.map((batch) => (
+            {batches.some((b) => (b.currentWeight || 0) === 0) && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="w-full text-muted-foreground"
+                onClick={() => setShowEmptyBatches(!showEmptyBatches)}
+              >
+                {showEmptyBatches ? <ChevronDown className="h-4 w-4 mr-1" /> : <ChevronRight className="h-4 w-4 mr-1" />}
+                {showEmptyBatches ? "Hide" : "Show"} empty batches ({batches.filter((b) => (b.currentWeight || 0) === 0).length})
+              </Button>
+            )}
+            {batches.filter((b) => (b.currentWeight || 0) > 0 || showEmptyBatches).map((batch) => (
               <div key={batch.id} className="flex gap-2 items-start p-3 rounded-lg bg-muted">
                 <div className="flex-1 space-y-2">
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-3 gap-2">
                     <div>
                       <Label className="text-xs">Price ($)</Label>
                       <Input
                         type="number"
                         placeholder="Price"
-                        value={batch.price}
-                        onChange={(e) => updateBatch(batch.id, "price", parseFloat(e.target.value) || 0)}
+                        value={batch.price === 0 ? "" : batch.price}
+                        onChange={(e) => updateBatch(batch.id, "price", e.target.value === "" ? 0 : parseFloat(e.target.value))}
+                        onBlur={(e) => updateBatch(batch.id, "price", parseFloat(e.target.value) || 0)}
                         step="0.01"
+                        className="px-2"
                       />
                     </div>
                     <div>
@@ -263,14 +430,24 @@ export function CoffeeBeanDialog({ open, onOpenChange, bean, isCloning = false }
                       <Input
                         type="number"
                         placeholder="Weight"
-                        value={batch.weight}
+                        value={batch.weight === 0 ? "" : batch.weight}
                         onChange={(e) => {
-                          const weight = parseFloat(e.target.value) || 0;
+                          const weight = e.target.value === "" ? 0 : parseFloat(e.target.value);
                           updateBatch(batch.id, "weight", weight);
                           if (!bean) {
                             updateBatch(batch.id, "currentWeight", weight);
                           }
                         }}
+                        className="px-2"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs">Remaining (g)</Label>
+                      <Input
+                        type="number"
+                        value={batch.currentWeight || 0}
+                        disabled
+                        className="px-2 bg-background"
                       />
                     </div>
                   </div>
@@ -318,5 +495,77 @@ export function CoffeeBeanDialog({ open, onOpenChange, bean, isCloning = false }
         </form>
       </DialogContent>
     </Dialog>
+    
+    <CoffeeBagScanner
+      open={scannerOpen}
+      onOpenChange={setScannerOpen}
+      onScanComplete={handleScanComplete}
+    />
+
+    {/* Review batch dialog for existing bean */}
+    <Dialog open={!!pendingBatchAdd} onOpenChange={(open) => !open && setPendingBatchAdd(null)}>
+      <DialogContent className="max-w-sm">
+        <DialogHeader>
+          <DialogTitle>Add Batch to Existing Bean</DialogTitle>
+        </DialogHeader>
+        {pendingBatchAdd && (
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Found existing bean: <span className="font-medium text-foreground">{pendingBatchAdd.bean.name}</span> by {pendingBatchAdd.bean.roaster}
+            </p>
+            
+            <div className="space-y-3 p-3 rounded-lg bg-muted">
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <Label className="text-xs">Weight (g)</Label>
+                  <Input
+                    type="number"
+                    value={pendingBatchAdd.batch.weight === 0 ? "" : pendingBatchAdd.batch.weight}
+                    onChange={(e) => updatePendingBatch("weight", e.target.value === "" ? 0 : parseFloat(e.target.value))}
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs">Price ($)</Label>
+                  <Input
+                    type="number"
+                    value={pendingBatchAdd.batch.price === 0 ? "" : pendingBatchAdd.batch.price}
+                    onChange={(e) => updatePendingBatch("price", e.target.value === "" ? 0 : parseFloat(e.target.value))}
+                    step="0.01"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <Label className="text-xs">Purchase Date</Label>
+                  <Input
+                    type="date"
+                    value={pendingBatchAdd.batch.purchaseDate}
+                    onChange={(e) => updatePendingBatch("purchaseDate", e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs">Roast Date</Label>
+                  <Input
+                    type="date"
+                    value={pendingBatchAdd.batch.roastDate}
+                    onChange={(e) => updatePendingBatch("roastDate", e.target.value)}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-2">
+              <Button variant="outline" className="flex-1" onClick={() => setPendingBatchAdd(null)}>
+                Cancel
+              </Button>
+              <Button className="flex-1" onClick={confirmAddBatch}>
+                Add Batch
+              </Button>
+            </div>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }

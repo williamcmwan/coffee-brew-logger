@@ -37,12 +37,34 @@ interface RecipeDialogProps {
   isCloning?: boolean;
 }
 
+// Helper to format duration in seconds to display string
+const formatDuration = (seconds: number): string => {
+  if (seconds >= 60) {
+    return `${Math.floor(seconds / 60)}:${(seconds % 60).toString().padStart(2, '0')}`;
+  }
+  return seconds.toString();
+};
+
+// Helper to parse time string to seconds
+const parseDuration = (val: string): number => {
+  if (val === '' || val === ':') return 0;
+  if (val.includes(':')) {
+    const parts = val.split(':');
+    const mins = parseInt(parts[0], 10) || 0;
+    const secs = parseInt(parts[1], 10) || 0;
+    return mins * 60 + secs;
+  }
+  return parseInt(val, 10) || 0;
+};
+
 export function RecipeDialog({ open, onOpenChange, recipe, isCloning = false }: RecipeDialogProps) {
   const { addRecipe, updateRecipe, grinders, brewers } = useApp();
   const { toast } = useToast();
   const [processSteps, setProcessSteps] = useState<RecipeStep[]>([
     { description: "", waterAmount: 0, duration: 30 }
   ]);
+  // Track raw elapsed time input values to allow free editing
+  const [elapsedTimeInputs, setElapsedTimeInputs] = useState<Record<number, string>>({});
 
   const {
     register,
@@ -84,10 +106,17 @@ export function RecipeDialog({ open, onOpenChange, recipe, isCloning = false }: 
       });
       if (recipe.processSteps && recipe.processSteps.length > 0) {
         setProcessSteps([...recipe.processSteps]);
+        // Initialize elapsed time inputs from recipe steps
+        const inputs: Record<number, string> = {};
+        recipe.processSteps.forEach((step, index) => {
+          inputs[index] = formatDuration(step.duration);
+        });
+        setElapsedTimeInputs(inputs);
       }
     } else {
       reset();
       setProcessSteps([{ description: "", waterAmount: 0, duration: 30 }]);
+      setElapsedTimeInputs({ 0: "30" });
     }
   }, [recipe, isCloning, setValue, reset]);
 
@@ -126,12 +155,25 @@ export function RecipeDialog({ open, onOpenChange, recipe, isCloning = false }: 
   };
 
   const addStep = () => {
+    const newIndex = processSteps.length;
     setProcessSteps([...processSteps, { description: "", waterAmount: 0, duration: 30 }]);
+    setElapsedTimeInputs(prev => ({ ...prev, [newIndex]: "30" }));
   };
 
   const removeStep = (index: number) => {
     if (processSteps.length > 1) {
       setProcessSteps(processSteps.filter((_, i) => i !== index));
+      // Reindex elapsed time inputs
+      const newInputs: Record<number, string> = {};
+      Object.keys(elapsedTimeInputs).forEach(key => {
+        const keyNum = parseInt(key, 10);
+        if (keyNum < index) {
+          newInputs[keyNum] = elapsedTimeInputs[keyNum];
+        } else if (keyNum > index) {
+          newInputs[keyNum - 1] = elapsedTimeInputs[keyNum];
+        }
+      });
+      setElapsedTimeInputs(newInputs);
     }
   };
 
@@ -284,21 +326,23 @@ export function RecipeDialog({ open, onOpenChange, recipe, isCloning = false }: 
                       <Input
                         type="text"
                         placeholder="30 or 1:30"
-                        value={
-                          step.duration >= 60
-                            ? `${Math.floor(step.duration / 60)}:${(step.duration % 60).toString().padStart(2, '0')}`
-                            : step.duration.toString()
-                        }
+                        value={elapsedTimeInputs[index] ?? formatDuration(step.duration)}
                         onChange={(e) => {
                           const val = e.target.value;
-                          let seconds = 0;
-                          if (val.includes(':')) {
-                            const [mins, secs] = val.split(':').map(Number);
-                            seconds = (mins || 0) * 60 + (secs || 0);
-                          } else {
-                            seconds = Number(val) || 0;
-                          }
+                          // Allow any input including empty string
+                          setElapsedTimeInputs(prev => ({ ...prev, [index]: val }));
+                          // Parse and update duration
+                          const seconds = parseDuration(val);
                           updateStep(index, "duration", seconds);
+                        }}
+                        onBlur={() => {
+                          // On blur, format the value nicely if it's valid
+                          const currentInput = elapsedTimeInputs[index] ?? '';
+                          if (currentInput === '') {
+                            // Keep empty as 0
+                            updateStep(index, "duration", 0);
+                            setElapsedTimeInputs(prev => ({ ...prev, [index]: '0' }));
+                          }
                         }}
                       />
                     </div>

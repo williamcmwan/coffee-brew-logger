@@ -49,6 +49,9 @@ export const copyToClipboard = async (text: string) => {
   }
 };
 
+// Get app URL from environment
+const getAppUrl = () => import.meta.env.VITE_APP_URL || 'https://brew.wanwill.com';
+
 // Generate recipe share text
 export const generateRecipeShareText = (
   recipe: Recipe,
@@ -67,7 +70,9 @@ export const generateRecipeShareText = (
 • Temp: ${recipe.temperature}°C
 • Time: ${recipe.brewTime}
 
-#Coffee #BrewRecipe #Specialty`;
+#Coffee #BrewRecipe #Specialty
+
+🔗 Track your brews: ${getAppUrl()}`;
 };
 
 // Generate brew result share text
@@ -111,7 +116,7 @@ ${ratingStars} ${brew.rating ? `${brew.rating}/5` : ''}
     text += `\n\n💭 Notes: ${brew.comment}`;
   }
 
-  text += '\n\n#Coffee #Brewing #Specialty';
+  text += `\n\n#Coffee #Brewing #Specialty\n\n🔗 Track your brews: ${getAppUrl()}`;
 
   return text;
 };

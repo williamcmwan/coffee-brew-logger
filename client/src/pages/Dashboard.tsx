@@ -13,6 +13,8 @@ export default function Dashboard() {
   
   // Check if user is new (no beans added yet - they need to set up their own beans)
   const isNewUser = coffeeBeans.length === 0;
+  
+
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-secondary/20 to-background">
@@ -42,18 +44,16 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <Card className="bg-gradient-to-br from-primary to-primary/80 text-primary-foreground border-0">
+        <Card 
+          className="bg-gradient-to-br from-primary to-primary/80 text-primary-foreground border-0 cursor-pointer hover:shadow-lg transition-shadow"
+          onClick={() => navigate("/brew")}
+        >
           <CardContent className="p-3">
             <div className="flex items-center justify-between">
               <h2 className="text-base font-bold">New Brew Session</h2>
-              <Button
-                size="lg"
-                variant="secondary"
-                onClick={() => navigate("/brew")}
-                className="rounded-full h-10 w-10"
-              >
-                <Plus className="h-5 w-5" />
-              </Button>
+              <div className="rounded-full h-10 w-10 bg-secondary flex items-center justify-center">
+                <Plus className="h-5 w-5 text-secondary-foreground" />
+              </div>
             </div>
           </CardContent>
         </Card>

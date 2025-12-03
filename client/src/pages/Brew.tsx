@@ -8,7 +8,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { ArrowLeft, Coffee, Droplets, Thermometer, Clock, Scale, Star, GlassWater, Bean, Package, BookOpen } from "lucide-react";
+import { ArrowLeft, Coffee, Droplets, Thermometer, Clock, Scale, Star, GlassWater, Bean, Package, BookOpen, Settings } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { toast } from "@/hooks/use-toast";
 import ImageUpload from "@/components/ImageUpload";
 import BrewTimerContent from "@/components/BrewTimerContent";
@@ -313,6 +314,30 @@ export default function Brew() {
             {/* Step 1: Select All Equipment & Recipe */}
             {step === 1 && (
               <div className="space-y-3 animate-fade-in">
+                {(coffeeBeans.length === 0 || grinders.length === 0 || brewers.length === 0 || recipes.length === 0) && (
+                  <Alert className="border-amber-500/50 bg-amber-500/5">
+                    <Settings className="h-4 w-4 text-amber-600" />
+                    <AlertTitle className="text-amber-600">Setup Required</AlertTitle>
+                    <AlertDescription className="text-sm">
+                      Before brewing, please add your{" "}
+                      {[
+                        coffeeBeans.length === 0 && "coffee beans",
+                        grinders.length === 0 && "grinder",
+                        brewers.length === 0 && "brewer",
+                        recipes.length === 0 && "recipe",
+                      ]
+                        .filter(Boolean)
+                        .join(", ")}{" "}
+                      in{" "}
+                      <span 
+                        className="text-primary font-medium cursor-pointer underline"
+                        onClick={() => navigate("/settings")}
+                      >
+                        Settings
+                      </span>.
+                    </AlertDescription>
+                  </Alert>
+                )}
                 <div className="p-3 rounded-lg border bg-card hover:border-primary/30 transition-colors">
                   <div className="flex items-center gap-2 mb-2">
                     <div className="rounded-full bg-primary/10 p-1.5">

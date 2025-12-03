@@ -3,7 +3,7 @@ import { useApp } from "@/contexts/AppContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Coffee, Settings, Plus, History, TrendingUp, GitCompare, Package, Star, Sparkles, MessageCircle } from "lucide-react";
+import { Coffee, Settings, Plus, History, TrendingUp, GitCompare, Package, Star, Sparkles, MessageCircle, ClipboardCheck } from "lucide-react";
 
 export default function Dashboard() {
   const { user, brews, coffeeBeans, recipes, grinders, brewers, logout } = useApp();
@@ -106,12 +106,26 @@ export default function Dashboard() {
                           {new Date(brew.date).toLocaleDateString()}
                         </p>
                       </div>
-                      {brew.rating != null && brew.rating > 0 && (
-                        <div className="flex items-center gap-1">
-                          <Star className="h-4 w-4 fill-yellow-500 text-yellow-500" />
-                          <span className="text-sm font-medium">{brew.rating}</span>
-                        </div>
-                      )}
+                      <div className="flex items-center gap-2">
+                        {brew.rating != null && brew.rating > 0 && (
+                          <div className="flex items-center gap-1">
+                            <Star className="h-4 w-4 fill-yellow-500 text-yellow-500" />
+                            <span className="text-sm font-medium">{brew.rating}</span>
+                          </div>
+                        )}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 shrink-0"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate('/brew', { state: { editBrew: brew, step: 4 } });
+                          }}
+                          title="Evaluate brew"
+                        >
+                          <ClipboardCheck className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
                   );
                 })}

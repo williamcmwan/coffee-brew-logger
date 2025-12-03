@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Coffee, Calendar, Star, TrendingUp, Filter, SortAsc, Download, FileText, FileSpreadsheet, ChevronDown, Pencil, Trash2 } from "lucide-react";
+import { ArrowLeft, Coffee, Calendar, Star, TrendingUp, Filter, SortAsc, Download, FileText, FileSpreadsheet, ChevronDown, Pencil, Trash2, ClipboardCheck } from "lucide-react";
 import {
   Collapsible,
   CollapsibleContent,
@@ -492,7 +492,17 @@ export default function BrewHistory() {
                                 variant="ghost" 
                                 size="icon"
                                 className="h-8 w-8"
+                                onClick={() => navigate('/brew', { state: { editBrew: brew, step: 4 } })}
+                                title="Evaluate brew"
+                              >
+                                <ClipboardCheck className="h-4 w-4" />
+                              </Button>
+                              <Button 
+                                variant="ghost" 
+                                size="icon"
+                                className="h-8 w-8"
                                 onClick={() => navigate('/brew', { state: { editBrew: brew } })}
+                                title="Edit brew"
                               >
                                 <Pencil className="h-4 w-4" />
                               </Button>
@@ -501,6 +511,7 @@ export default function BrewHistory() {
                                 size="icon"
                                 className="h-8 w-8"
                                 onClick={() => setDeleteId(brew.id)}
+                                title="Delete brew"
                               >
                                 <Trash2 className="h-4 w-4 text-destructive" />
                               </Button>

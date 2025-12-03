@@ -943,8 +943,11 @@ export default function Brew() {
             <BrewTimerContent 
               recipe={selectedRecipe}
               onClose={() => setTimerDialogOpen(false)}
-              onComplete={() => {
+              onComplete={(recordedBrewTime) => {
                 setTimerDialogOpen(false);
+                if (recordedBrewTime) {
+                  setBrewTime(recordedBrewTime);
+                }
                 setStep(3);
               }}
             />

@@ -3,8 +3,7 @@ import { useApp } from "@/contexts/AppContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { Play, Pause, RotateCcw, Coffee, X } from "lucide-react";
-import { toast } from "@/hooks/use-toast";
+import { Play, Pause, RotateCcw, Coffee, X, Check } from "lucide-react";
 
 interface TimerStep {
   title: string;
@@ -16,7 +15,7 @@ interface TimerStep {
 interface BrewTimerContentProps {
   recipe: any;
   onClose?: () => void;
-  onComplete: () => void;
+  onComplete: (brewTime?: string) => void;
   completeButtonText?: string;
   showCloseButton?: boolean;
   showBorder?: boolean;
@@ -37,6 +36,9 @@ export default function BrewTimerContent({
   const [timeRemaining, setTimeRemaining] = useState(0);
   const [isRunning, setIsRunning] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
+  const [isLastStep, setIsLastStep] = useState(false);
+  const [overtimeSeconds, setOvertimeSeconds] = useState(0);
+  const [totalElapsedTime, setTotalElapsedTime] = useState(0);
   
   // Persistent AudioContext for mobile browser support
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -66,13 +68,6 @@ export default function BrewTimerContent({
         return (mins || 0) * 60 + (secs || 0);
       }
       return Number(time) || 180;
-    };
-    
-    // Helper to format seconds to mm:ss
-    const formatElapsed = (seconds: number): string => {
-      const mins = Math.floor(seconds / 60);
-      const secs = seconds % 60;
-      return `${mins}:${secs.toString().padStart(2, '0')}`;
     };
     
     // Add initial preparation step (0 seconds - starts immediately)
@@ -216,9 +211,20 @@ export default function BrewTimerContent({
 
   // Timer countdown logic
   useEffect(() => {
-    if (!isRunning || timeRemaining <= 0) return;
+    if (!isRunning) return;
     
     const interval = setInterval(() => {
+      // Always increment total elapsed time when running
+      setTotalElapsedTime(prev => prev + 1);
+      
+      // Handle overtime mode (last step, countdown finished)
+      if (isLastStep && timeRemaining <= 0) {
+        setOvertimeSeconds(prev => prev + 1);
+        return;
+      }
+      
+      if (timeRemaining <= 0) return;
+      
       setTimeRemaining(prev => {
         // Play tick sound in last 5 seconds (but not at 0)
         if (prev <= 6 && prev > 1) {
@@ -234,23 +240,23 @@ export default function BrewTimerContent({
             const nextActiveIndex = findNextActiveStep(currentStepIndex + 1);
             const nextStep = steps[nextActiveIndex];
             
-            toast({
-              title: nextStep.title,
-              description: nextStep.description,
-              duration: 1000,
-            });
-            
             setCurrentStepIndex(nextActiveIndex);
             
+            // Check if this is the last step (Complete step or last timed step)
+            const isNextLastStep = nextActiveIndex === steps.length - 1 || 
+              (nextActiveIndex === steps.length - 2 && steps[steps.length - 1].duration === 0);
+            setIsLastStep(isNextLastStep);
+            
             if (nextStep.duration === 0) {
-              setIsRunning(false);
-              setIsComplete(true);
+              // This is the final "Complete" step - enter overtime mode
+              setIsLastStep(true);
+              return 0;
             }
             
             return nextStep.duration;
           } else {
-            setIsRunning(false);
-            setIsComplete(true);
+            // Already at last step, enter overtime mode
+            setIsLastStep(true);
             return 0;
           }
         }
@@ -259,7 +265,7 @@ export default function BrewTimerContent({
     }, 1000);
     
     return () => clearInterval(interval);
-  }, [isRunning, timeRemaining, currentStepIndex, steps, playTickSound, playBellSound, findNextActiveStep]);
+  }, [isRunning, timeRemaining, currentStepIndex, steps, playTickSound, playBellSound, findNextActiveStep, isLastStep]);
 
   const handleStart = () => {
     // Unlock AudioContext on user interaction (required for mobile browsers)
@@ -293,6 +299,17 @@ export default function BrewTimerContent({
     setCurrentStepIndex(0);
     setTimeRemaining(steps[0]?.duration || 0);
     setIsComplete(false);
+    setIsLastStep(false);
+    setOvertimeSeconds(0);
+    setTotalElapsedTime(0);
+  };
+
+  const handleFinish = () => {
+    setIsRunning(false);
+    setIsComplete(true);
+    // Pass the total elapsed time as brew time
+    const brewTimeFormatted = formatTime(totalElapsedTime);
+    onComplete(brewTimeFormatted);
   };
 
   if (!recipe) {
@@ -309,15 +326,24 @@ export default function BrewTimerContent({
   const brewer = brewers.find(b => b.id === recipe.brewerId);
   const currentStep = steps[currentStepIndex];
   const totalTime = steps.reduce((sum, step) => sum + step.duration, 0);
-  const elapsedTime = steps.slice(0, currentStepIndex).reduce((sum, step) => sum + step.duration, 0) + 
-                      (currentStep ? currentStep.duration - timeRemaining : 0);
-  const progressPercentage = totalTime > 0 ? (elapsedTime / totalTime) * 100 : 0;
+  const progressPercentage = totalTime > 0 ? Math.min((totalElapsedTime / totalTime) * 100, 100) : 0;
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
+
+  // Calculate checkpoint positions for the progress bar
+  const checkpoints = steps.reduce<{ position: number; title: string; elapsed: number }[]>((acc, step, index) => {
+    if (index === 0) return acc;
+    const elapsed = steps.slice(0, index).reduce((sum, s) => sum + s.duration, 0);
+    const position = totalTime > 0 ? (elapsed / totalTime) * 100 : 0;
+    if (position > 0 && position < 100) {
+      acc.push({ position, title: step.title, elapsed });
+    }
+    return acc;
+  }, []);
 
   return (
     <Card className={showBorder ? "" : "border-0"}>
@@ -335,11 +361,32 @@ export default function BrewTimerContent({
       <CardContent className="space-y-4">
         {/* Overall Progress */}
         <div className="space-y-1.5">
-          <div className="flex justify-between text-xs">
-            <span>Overall Progress</span>
-            <span>{Math.round(progressPercentage)}%</span>
+          {/* Time labels row - beginning, checkpoints, and end all on same line */}
+          <div className="relative h-5">
+            <span className="absolute left-0 text-sm font-medium">{formatTime(totalElapsedTime)}</span>
+            {checkpoints.map((checkpoint, index) => (
+              <span
+                key={`label-${index}`}
+                className="absolute text-sm text-muted-foreground"
+                style={{ left: `${checkpoint.position}%`, transform: 'translateX(-50%)' }}
+              >
+                {formatTime(checkpoint.elapsed)}
+              </span>
+            ))}
+            <span className="absolute right-0 text-sm text-muted-foreground">{formatTime(totalTime)}</span>
           </div>
-          <Progress value={progressPercentage} className="h-1.5" />
+          <div className="relative">
+            <Progress value={progressPercentage} className="h-2" />
+            {/* Checkpoint markers */}
+            {checkpoints.map((checkpoint, index) => (
+              <div
+                key={index}
+                className="absolute top-0 h-2 w-0.5 bg-background/80"
+                style={{ left: `${checkpoint.position}%` }}
+                title={`${checkpoint.title} @ ${formatTime(checkpoint.elapsed)}`}
+              />
+            ))}
+          </div>
         </div>
 
         {/* Current Step */}
@@ -354,10 +401,12 @@ export default function BrewTimerContent({
             </div>
           </div>
           
-          {currentStep && currentStep.duration > 0 && (
+          {currentStep && (currentStep.duration > 0 || isLastStep) && (
             <>
-              <div className={`font-bold tabular-nums text-center ${timeRemaining <= 5 ? 'text-orange-500' : ''}`} style={{ fontSize: '6rem', lineHeight: 1 }}>
-                {formatTime(timeRemaining)}
+              <div className={`font-bold tabular-nums text-center ${
+                overtimeSeconds > 0 ? 'text-blue-500' : timeRemaining <= 5 && timeRemaining > 0 ? 'text-orange-500' : ''
+              }`} style={{ fontSize: '6rem', lineHeight: 1 }}>
+                {overtimeSeconds > 0 ? `+${formatTime(overtimeSeconds)}` : formatTime(timeRemaining)}
               </div>
               {currentStep.waterAmount && currentStep.waterAmount > 0 && (
                 <div className="flex gap-8 justify-center text-muted-foreground mt-4">
@@ -400,35 +449,51 @@ export default function BrewTimerContent({
         <div className="flex gap-2 justify-center">
           {!isComplete && (
             <>
-              {!isRunning ? (
-                <Button onClick={handleStart} size="lg" className="min-w-32">
-                  <Play className="mr-2 h-5 w-5" />
-                  {currentStepIndex === 0 ? 'Start' : 'Resume'}
-                </Button>
+              {isLastStep && isRunning ? (
+                // Last step - show Finish button
+                <>
+                  <Button onClick={handleFinish} size="lg" className="min-w-32">
+                    <Check className="mr-2 h-5 w-5" />
+                    Finish
+                  </Button>
+                  <Button onClick={handleReset} size="lg" variant="outline">
+                    <RotateCcw className="mr-2 h-5 w-5" />
+                    Reset
+                  </Button>
+                </>
               ) : (
-                <Button onClick={handlePause} size="lg" variant="secondary" className="min-w-32">
-                  <Pause className="mr-2 h-5 w-5" />
-                  Pause
-                </Button>
+                <>
+                  {!isRunning ? (
+                    <Button onClick={handleStart} size="lg" className="min-w-32">
+                      <Play className="mr-2 h-5 w-5" />
+                      {currentStepIndex === 0 ? 'Start' : 'Resume'}
+                    </Button>
+                  ) : (
+                    <Button onClick={handlePause} size="lg" variant="secondary" className="min-w-32">
+                      <Pause className="mr-2 h-5 w-5" />
+                      Pause
+                    </Button>
+                  )}
+                  <Button onClick={handleReset} size="lg" variant="outline">
+                    <RotateCcw className="mr-2 h-5 w-5" />
+                    Reset
+                  </Button>
+                </>
               )}
-              <Button onClick={handleReset} size="lg" variant="outline">
-                <RotateCcw className="mr-2 h-5 w-5" />
-                Reset
-              </Button>
             </>
           )}
           
           {isComplete && (
             <div className="text-center space-y-3 w-full">
               <div className="text-lg text-primary font-semibold">
-                ✨ Brewing Complete!
+                ✨ Brewing Complete! Total time: {formatTime(totalElapsedTime)}
               </div>
               <div className="flex gap-2">
                 <Button onClick={handleReset} variant="outline" className="flex-1">
                   <RotateCcw className="mr-1 h-4 w-4" />
                   Brew Again
                 </Button>
-                <Button onClick={onComplete} className="flex-1">
+                <Button onClick={() => onComplete(formatTime(totalElapsedTime))} className="flex-1">
                   {completeButtonText}
                 </Button>
               </div>

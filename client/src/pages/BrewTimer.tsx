@@ -19,13 +19,13 @@ export default function BrewTimer() {
     navigate(-1);
   };
 
-  const handleComplete = () => {
+  const handleComplete = (recordedBrewTime?: string) => {
     if (brewData) {
-      // Return to brew workflow with brew data
-      navigate('/brew', { state: { brewData, fromTimer: true } });
+      // Return to brew workflow with brew data and recorded brew time
+      navigate('/brew', { state: { brewData: { ...brewData, brewTime: recordedBrewTime || brewData.brewTime }, fromTimer: true } });
     } else {
       // Start new brew with this recipe
-      navigate('/brew', { state: { recipeId } });
+      navigate('/brew', { state: { recipeId, brewTime: recordedBrewTime } });
     }
   };
 

@@ -3,6 +3,13 @@ import { db } from '../db/schema.js';
 const TEMPLATE_USER_EMAIL = 'admin@admin.com';
 
 export function seedUserDefaults(newUserId: number): void {
+  // Check if seeding is enabled via environment variable
+  const seedEnabled = process.env.SEED_USER_DEFAULTS !== 'false';
+  if (!seedEnabled) {
+    console.log('User default seeding is disabled (SEED_USER_DEFAULTS=false)');
+    return;
+  }
+
   // Get template user
   const templateUser = db
     .prepare('SELECT id FROM users WHERE LOWER(email) = LOWER(?)')

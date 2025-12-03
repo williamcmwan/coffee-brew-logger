@@ -46,6 +46,13 @@ interface PendingBatchAdd {
   batch: CoffeeBatch;
 }
 
+// State for weight adjustment confirmation
+interface PendingWeightAdjust {
+  batchId: string;
+  newWeight: number;
+  currentRemaining: number;
+}
+
 export function CoffeeBeanDialog({ open, onOpenChange, bean, isCloning = false }: CoffeeBeanDialogProps) {
   const { addCoffeeBean, updateCoffeeBean, coffeeBeans } = useApp();
   const { toast } = useToast();
@@ -53,6 +60,8 @@ export function CoffeeBeanDialog({ open, onOpenChange, bean, isCloning = false }
   const [batches, setBatches] = useState<CoffeeBatch[]>([]);
   const [scannerOpen, setScannerOpen] = useState(false);
   const [pendingBatchAdd, setPendingBatchAdd] = useState<PendingBatchAdd | null>(null);
+  const [pendingWeightAdjust, setPendingWeightAdjust] = useState<PendingWeightAdjust | null>(null);
+  const [adjustedRemaining, setAdjustedRemaining] = useState<number>(0);
   const [showEmptyBatches, setShowEmptyBatches] = useState(false);
 
   const {
@@ -441,9 +450,21 @@ export function CoffeeBeanDialog({ open, onOpenChange, bean, isCloning = false }
                         value={batch.weight === 0 ? "" : batch.weight}
                         onChange={(e) => {
                           const weight = e.target.value === "" ? 0 : parseFloat(e.target.value);
-                          updateBatch(batch.id, "weight", weight);
-                          if (!bean) {
-                            updateBatch(batch.id, "currentWeight", weight);
+                          const currentRemaining = batch.currentWeight || 0;
+                          
+                          // If editing existing bean and new weight is less than remaining, ask user
+                          if (bean && weight < currentRemaining && weight > 0) {
+                            setPendingWeightAdjust({
+                              batchId: batch.id,
+                              newWeight: weight,
+                              currentRemaining: currentRemaining
+                            });
+                            setAdjustedRemaining(weight);
+                          } else {
+                            updateBatch(batch.id, "weight", weight);
+                            if (!bean) {
+                              updateBatch(batch.id, "currentWeight", weight);
+                            }
                           }
                         }}
                         className="px-2"
@@ -568,6 +589,55 @@ export function CoffeeBeanDialog({ open, onOpenChange, bean, isCloning = false }
               </Button>
               <Button className="flex-1" onClick={confirmAddBatch}>
                 Add Batch
+              </Button>
+            </div>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+
+    {/* Weight adjustment confirmation dialog */}
+    <Dialog open={!!pendingWeightAdjust} onOpenChange={(open) => !open && setPendingWeightAdjust(null)}>
+      <DialogContent className="max-w-sm">
+        <DialogHeader>
+          <DialogTitle>Adjust Remaining Weight</DialogTitle>
+        </DialogHeader>
+        {pendingWeightAdjust && (
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              The new weight ({pendingWeightAdjust.newWeight}g) is less than the current remaining weight ({pendingWeightAdjust.currentRemaining}g).
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Please confirm the new remaining weight:
+            </p>
+            
+            <div className="space-y-2">
+              <Label className="text-xs">Remaining Weight (g)</Label>
+              <Input
+                type="number"
+                value={adjustedRemaining}
+                onChange={(e) => setAdjustedRemaining(parseFloat(e.target.value) || 0)}
+                max={pendingWeightAdjust.newWeight}
+              />
+              {adjustedRemaining > pendingWeightAdjust.newWeight && (
+                <p className="text-xs text-destructive">Remaining cannot exceed total weight</p>
+              )}
+            </div>
+
+            <div className="flex gap-2">
+              <Button variant="outline" className="flex-1" onClick={() => setPendingWeightAdjust(null)}>
+                Cancel
+              </Button>
+              <Button 
+                className="flex-1" 
+                disabled={adjustedRemaining > pendingWeightAdjust.newWeight}
+                onClick={() => {
+                  updateBatch(pendingWeightAdjust.batchId, "weight", pendingWeightAdjust.newWeight);
+                  updateBatch(pendingWeightAdjust.batchId, "currentWeight", Math.min(adjustedRemaining, pendingWeightAdjust.newWeight));
+                  setPendingWeightAdjust(null);
+                }}
+              >
+                Confirm
               </Button>
             </div>
           </div>

@@ -450,6 +450,13 @@ export function CoffeeBeanDialog({ open, onOpenChange, bean, isCloning = false }
                         value={batch.weight === 0 ? "" : batch.weight}
                         onChange={(e) => {
                           const weight = e.target.value === "" ? 0 : parseFloat(e.target.value);
+                          updateBatch(batch.id, "weight", weight);
+                          if (!bean) {
+                            updateBatch(batch.id, "currentWeight", weight);
+                          }
+                        }}
+                        onBlur={(e) => {
+                          const weight = e.target.value === "" ? 0 : parseFloat(e.target.value);
                           const currentRemaining = batch.currentWeight || 0;
                           
                           // If editing existing bean and new weight is less than remaining, ask user
@@ -460,11 +467,6 @@ export function CoffeeBeanDialog({ open, onOpenChange, bean, isCloning = false }
                               currentRemaining: currentRemaining
                             });
                             setAdjustedRemaining(weight);
-                          } else {
-                            updateBatch(batch.id, "weight", weight);
-                            if (!bean) {
-                              updateBatch(batch.id, "currentWeight", weight);
-                            }
                           }
                         }}
                         className="px-2"

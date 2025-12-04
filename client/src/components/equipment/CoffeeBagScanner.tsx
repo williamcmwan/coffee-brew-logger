@@ -77,14 +77,13 @@ export function CoffeeBagScanner({ open, onOpenChange, onScanComplete }: CoffeeB
 
     setIsAnalyzing(true);
     try {
-      // Resize images to 768x768 for API (good balance of quality vs tokens)
+      // Resize images to 512x512 for API (minimize tokens)
       const resizeForApi = async (dataUrl: string): Promise<string> => {
         return new Promise((resolve) => {
           const img = new Image();
           img.onload = () => {
             const canvas = document.createElement('canvas');
-            // Use 768x768 - good for text recognition while minimizing tokens
-            const size = 768;
+            const size = 512;
             canvas.width = size;
             canvas.height = size;
             const ctx = canvas.getContext('2d');
@@ -97,7 +96,7 @@ export function CoffeeBagScanner({ open, onOpenChange, onScanComplete }: CoffeeB
               const x = (size - img.width * scale) / 2;
               const y = (size - img.height * scale) / 2;
               ctx.drawImage(img, x, y, img.width * scale, img.height * scale);
-              resolve(canvas.toDataURL('image/jpeg', 0.85));
+              resolve(canvas.toDataURL('image/jpeg', 0.7));
             } else {
               resolve(dataUrl);
             }

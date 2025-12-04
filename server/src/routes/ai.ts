@@ -158,6 +158,11 @@ Rules: Use "N/A" if unknown (except roastFor/roastDate/weight). roastDate from s
     const inputTokens = data.usageMetadata?.promptTokenCount;
     const outputTokens = data.usageMetadata?.candidatesTokenCount;
     
+    // Log API usage to database (tokens were consumed regardless of success)
+    if (inputTokens && outputTokens) {
+      logApiUsage(userId, inputTokens, outputTokens);
+    }
+
     // Extract the text response
     const textResponse = data.candidates?.[0]?.content?.parts?.[0]?.text;
     if (!textResponse) {
@@ -177,7 +182,13 @@ Rules: Use "N/A" if unknown (except roastFor/roastDate/weight). roastDate from s
     }
     jsonStr = jsonStr.trim();
 
-    const coffeeInfo: CoffeeBeanInfo = JSON.parse(jsonStr);
+    let coffeeInfo: CoffeeBeanInfo;
+    try {
+      coffeeInfo = JSON.parse(jsonStr);
+    } catch (parseError) {
+      logGeminiCall({ timestamp, userId, success: false, inputTokens, outputTokens, error: `JSON parse error: ${jsonStr.substring(0, 100)}` });
+      return res.status(500).json({ error: 'Failed to parse AI response' });
+    }
     
     // Validate roastFor value
     if (coffeeInfo.roastFor && !['pour-over', 'espresso', ''].includes(coffeeInfo.roastFor)) {
@@ -193,11 +204,6 @@ Rules: Use "N/A" if unknown (except roastFor/roastDate/weight). roastDate from s
       outputTokens,
       extractedData: coffeeInfo
     });
-
-    // Log API usage to database for admin stats
-    if (inputTokens && outputTokens) {
-      logApiUsage(userId, inputTokens, outputTokens);
-    }
 
     res.json(coffeeInfo);
   } catch (error) {

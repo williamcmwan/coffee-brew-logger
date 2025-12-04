@@ -22,6 +22,7 @@ import uploadsRoutes from './routes/uploads.js';
 import coffeeServersRoutes from './routes/coffeeServers.js';
 import aiRoutes from './routes/ai.js';
 import adminRoutes from './routes/admin.js';
+import healthRoutes from './routes/health.js';
 import { authMiddleware } from './middleware/auth.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -131,6 +132,7 @@ app.use('/api/auth/reset-password', authLimiter);
 app.use('/api', apiLimiter);
 
 // Public routes (no auth required)
+app.use('/api/health', healthRoutes);
 app.use('/api/auth', authRoutes);
 
 // Protected routes (auth required)

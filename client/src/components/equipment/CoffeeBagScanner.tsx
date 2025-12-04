@@ -77,13 +77,13 @@ export function CoffeeBagScanner({ open, onOpenChange, onScanComplete }: CoffeeB
 
     setIsAnalyzing(true);
     try {
-      // Resize images to 512x512 for API (minimize tokens)
+      // Resize images to 768x768 for API
       const resizeForApi = async (dataUrl: string): Promise<string> => {
         return new Promise((resolve) => {
           const img = new Image();
           img.onload = () => {
             const canvas = document.createElement('canvas');
-            const size = 512;
+            const size = 768;
             canvas.width = size;
             canvas.height = size;
             const ctx = canvas.getContext('2d');
@@ -96,7 +96,7 @@ export function CoffeeBagScanner({ open, onOpenChange, onScanComplete }: CoffeeB
               const x = (size - img.width * scale) / 2;
               const y = (size - img.height * scale) / 2;
               ctx.drawImage(img, x, y, img.width * scale, img.height * scale);
-              resolve(canvas.toDataURL('image/jpeg', 0.7));
+              resolve(canvas.toDataURL('image/jpeg', 0.8));
             } else {
               resolve(dataUrl);
             }
@@ -106,9 +106,12 @@ export function CoffeeBagScanner({ open, onOpenChange, onScanComplete }: CoffeeB
         });
       };
 
+      // Always send 2 images (Gemini quirk: 2 images uses fewer tokens than 1)
       const images: string[] = [];
-      if (frontImage) images.push(await resizeForApi(frontImage));
-      if (backImage) images.push(await resizeForApi(backImage));
+      const firstImage = frontImage || backImage;
+      const secondImage = backImage || frontImage;
+      if (firstImage) images.push(await resizeForApi(firstImage));
+      if (secondImage) images.push(await resizeForApi(secondImage));
 
       const result = await api.ai.analyzeCoffeeBag(images);
       

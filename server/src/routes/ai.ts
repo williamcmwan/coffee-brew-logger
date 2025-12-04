@@ -27,6 +27,8 @@ interface GeminiLogEntry {
   timestamp: string;
   userId?: number;
   success: boolean;
+  imageCount?: number;
+  imageSizes?: number[];
   inputTokens?: number;
   outputTokens?: number;
   error?: string;
@@ -93,6 +95,7 @@ router.post('/analyze-coffee-bag', async (req: AuthRequest, res: Response) => {
 
     // Build the parts array with images
     const parts: any[] = [];
+    const imageSizes: number[] = [];
     
     for (let i = 0; i < images.length; i++) {
       const imageData = images[i];
@@ -108,6 +111,9 @@ router.post('/analyze-coffee-bag', async (req: AuthRequest, res: Response) => {
         }
       }
       
+      // Track image size in bytes
+      imageSizes.push(Math.round(base64Data.length * 0.75)); // base64 to bytes approximation
+      
       // Validate MIME type
       if (!['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(mimeType)) {
         return res.status(400).json({ error: 'Invalid image type' });
@@ -120,6 +126,8 @@ router.post('/analyze-coffee-bag', async (req: AuthRequest, res: Response) => {
         }
       });
     }
+    
+    console.log(`Gemini request: ${images.length} images, sizes: ${imageSizes.map(s => Math.round(s/1024) + 'KB').join(', ')}`);
 
     // Compact prompt to minimize tokens
     parts.push({
@@ -166,7 +174,7 @@ Rules: Use "N/A" if unknown (except roastFor/roastDate/weight). roastDate from s
     // Extract the text response
     const textResponse = data.candidates?.[0]?.content?.parts?.[0]?.text;
     if (!textResponse) {
-      logGeminiCall({ timestamp, userId, success: false, inputTokens, outputTokens, error: 'No response text' });
+      logGeminiCall({ timestamp, userId, success: false, imageCount: images.length, inputTokens, outputTokens, error: 'No response text' });
       return res.status(500).json({ error: 'No response from AI' });
     }
 
@@ -186,7 +194,7 @@ Rules: Use "N/A" if unknown (except roastFor/roastDate/weight). roastDate from s
     try {
       coffeeInfo = JSON.parse(jsonStr);
     } catch (parseError) {
-      logGeminiCall({ timestamp, userId, success: false, inputTokens, outputTokens, error: `JSON parse error: ${jsonStr.substring(0, 100)}` });
+      logGeminiCall({ timestamp, userId, success: false, imageCount: images.length, inputTokens, outputTokens, error: `JSON parse error: ${jsonStr.substring(0, 100)}` });
       return res.status(500).json({ error: 'Failed to parse AI response' });
     }
     
@@ -194,12 +202,22 @@ Rules: Use "N/A" if unknown (except roastFor/roastDate/weight). roastDate from s
     if (coffeeInfo.roastFor && !['pour-over', 'espresso', ''].includes(coffeeInfo.roastFor)) {
       coffeeInfo.roastFor = '';
     }
+    
+    // Replace pipe separators with slash for better readability
+    if (coffeeInfo.country) {
+      coffeeInfo.country = coffeeInfo.country.replace(/\|/g, ' / ');
+    }
+    if (coffeeInfo.region) {
+      coffeeInfo.region = coffeeInfo.region.replace(/\|/g, ' / ');
+    }
 
     // Log successful call to file
     logGeminiCall({
       timestamp,
       userId,
       success: true,
+      imageCount: images.length,
+      imageSizes,
       inputTokens,
       outputTokens,
       extractedData: coffeeInfo

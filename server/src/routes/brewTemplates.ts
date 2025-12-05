@@ -64,8 +64,33 @@ router.put('/:id', (req: AuthRequest, res: Response) => {
 
 router.delete('/:id', (req: AuthRequest, res: Response) => {
   const userId = req.userId;
+  const { id } = req.params;
   
-  db.prepare('DELETE FROM brew_templates WHERE id = ? AND user_id = ?').run(req.params.id, userId);
+  // Check if brew template is used in any brews (stored in template_notes JSON)
+  // template_notes contains { templateId: "id", fields: {...} }
+  const brews = db.prepare(
+    'SELECT template_notes FROM brews WHERE user_id = ? AND template_notes IS NOT NULL'
+  ).all(userId) as { template_notes: string }[];
+  
+  let usageCount = 0;
+  for (const brew of brews) {
+    try {
+      const notes = JSON.parse(brew.template_notes);
+      if (notes.templateId === id) {
+        usageCount++;
+      }
+    } catch {
+      // Ignore invalid JSON
+    }
+  }
+  
+  if (usageCount > 0) {
+    return res.status(400).json({ 
+      error: `Cannot delete this template. It is used in ${usageCount} brew(s). Please delete those brews first.` 
+    });
+  }
+  
+  db.prepare('DELETE FROM brew_templates WHERE id = ? AND user_id = ?').run(id, userId);
   res.json({ success: true });
 });
 

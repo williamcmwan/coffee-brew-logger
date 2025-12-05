@@ -42,7 +42,7 @@ export default function Settings() {
     }
   };
 
-  const isEmailUser = user?.authProvider === 'email' || !user?.authProvider;
+  const isEmailUser = (user?.authProvider === 'email' || !user?.authProvider) && user?.authProvider !== 'guest';
 
   const sections = [
     { title: "Coffee Beans", icon: Bean, path: "/settings/beans", description: "Manage your coffee collection" },

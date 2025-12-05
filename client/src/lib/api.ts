@@ -60,7 +60,18 @@ export interface AuthUser {
   name: string;
   authProvider?: string;
   avatarUrl?: string;
+  isAdmin?: boolean;
   token?: string;
+}
+
+export interface GuestDataCounts {
+  beans: number;
+  grinders: number;
+  brewers: number;
+  servers: number;
+  recipes: number;
+  templates: number;
+  brews: number;
 }
 
 export const api = {
@@ -84,6 +95,28 @@ export const api = {
         setAuthToken(response.token);
       }
       return response;
+    },
+    guest: async (deviceId: string): Promise<AuthUser & { isGuest: boolean }> => {
+      const response = await request<AuthUser & { isGuest: boolean }>('/auth/guest', {
+        method: 'POST',
+        body: JSON.stringify({ deviceId }),
+      });
+      if (response.token) {
+        setAuthToken(response.token);
+      }
+      return response;
+    },
+    getGuestData: async (deviceId: string): Promise<{ exists: boolean; counts: GuestDataCounts | null }> => {
+      return request<{ exists: boolean; counts: GuestDataCounts | null }>(`/auth/guest-data/${deviceId}`);
+    },
+    getCurrentUser: async (): Promise<AuthUser> => {
+      return request<AuthUser>('/auth/me');
+    },
+    migrateGuest: async (guestDeviceId: string): Promise<{ message: string; migrated: GuestDataCounts }> => {
+      return request<{ message: string; migrated: GuestDataCounts }>('/auth/migrate-guest', {
+        method: 'POST',
+        body: JSON.stringify({ guestDeviceId }),
+      });
     },
     changePassword: async (currentPassword: string, newPassword: string, confirmNewPassword: string): Promise<{ message: string }> => {
       return request<{ message: string }>('/auth/change-password', {

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { useApp } from "@/contexts/AppContext";
+import { useApp, GUEST_LIMITS } from "@/contexts/AppContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -17,7 +17,7 @@ import BrewTimerContent from "@/components/BrewTimerContent";
 export default function Brew() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { coffeeBeans, grinders, brewers, recipes, addBrew, updateBrew, updateCoffeeBean, brewTemplates, brews, coffeeServers } = useApp();
+  const { coffeeBeans, grinders, brewers, recipes, addBrew, updateBrew, updateCoffeeBean, brewTemplates, brews, coffeeServers, isGuest, guestLimitReached } = useApp();
   
   const fromTimer = location.state?.fromTimer;
   const editBrew = location.state?.editBrew;
@@ -140,6 +140,16 @@ export default function Brew() {
   const handleSaveBrewInitial = async () => {
     if (!yieldAmount || !brewTime) {
       toast({ title: "Please fill in yield and brew time", variant: "destructive" });
+      return;
+    }
+
+    // Check guest limit for new brews only
+    if (!isEditing && guestLimitReached("brews")) {
+      toast({
+        title: "Guest Limit Reached",
+        description: `Guest users can only save ${GUEST_LIMITS.brews} brews. Sign up for unlimited access.`,
+        variant: "destructive",
+      });
       return;
     }
 

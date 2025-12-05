@@ -1,6 +1,9 @@
 import { db } from '../db/schema.js';
 
-const TEMPLATE_USER_EMAIL = 'admin@admin.com';
+// Get template user email from environment, fallback to default
+function getTemplateUserEmail(): string {
+  return process.env.TEMPLATE_USER_EMAIL || 'admin@admin.com';
+}
 
 export function seedUserDefaults(newUserId: number): void {
   // Check if seeding is enabled via environment variable
@@ -11,9 +14,10 @@ export function seedUserDefaults(newUserId: number): void {
   }
 
   // Get template user
+  const templateUserEmail = getTemplateUserEmail();
   const templateUser = db
     .prepare('SELECT id FROM users WHERE LOWER(email) = LOWER(?)')
-    .get(TEMPLATE_USER_EMAIL) as { id: number } | undefined;
+    .get(templateUserEmail) as { id: number } | undefined;
 
   if (!templateUser) {
     console.log('Template user not found, skipping default seeding');

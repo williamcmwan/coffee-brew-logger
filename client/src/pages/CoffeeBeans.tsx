@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useApp } from "@/contexts/AppContext";
+import { useApp, GUEST_LIMITS } from "@/contexts/AppContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -21,7 +21,7 @@ import {
 import type { CoffeeBean } from "@/contexts/AppContext";
 
 export default function CoffeeBeans() {
-  const { coffeeBeans, deleteCoffeeBean, toggleCoffeeBeanFavorite } = useApp();
+  const { coffeeBeans, deleteCoffeeBean, toggleCoffeeBeanFavorite, isGuest, guestLimitReached } = useApp();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -37,24 +37,49 @@ export default function CoffeeBeans() {
   };
 
   const handleClone = (bean: CoffeeBean) => {
+    if (guestLimitReached("beans")) {
+      toast({
+        title: "Guest Limit Reached",
+        description: `Guest users can only add ${GUEST_LIMITS.beans} coffee beans. Sign up for unlimited access.`,
+        variant: "destructive",
+      });
+      return;
+    }
     setEditingBean(bean);
     setIsCloning(true);
     setDialogOpen(true);
   };
 
   const handleAdd = () => {
+    if (guestLimitReached("beans")) {
+      toast({
+        title: "Guest Limit Reached",
+        description: `Guest users can only add ${GUEST_LIMITS.beans} coffee beans. Sign up for unlimited access.`,
+        variant: "destructive",
+      });
+      return;
+    }
     setEditingBean(null);
     setIsCloning(false);
     setDialogOpen(true);
   };
 
-  const handleDelete = (id: string) => {
-    deleteCoffeeBean(id);
-    setDeleteId(null);
-    toast({
-      title: "Coffee bean deleted",
-      description: "Coffee bean has been removed successfully",
-    });
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteCoffeeBean(id);
+      setDeleteId(null);
+      toast({
+        title: "Coffee bean deleted",
+        description: "Coffee bean has been removed successfully",
+      });
+    } catch (error) {
+      setDeleteId(null);
+      toast({
+        title: "Cannot delete",
+        description: error instanceof Error ? error.message : "Failed to delete coffee bean",
+        variant: "destructive",
+      });
+    }
   };
 
   const filteredBeans = coffeeBeans.filter(b => {

@@ -1,19 +1,18 @@
 import { useNavigate } from "react-router-dom";
-import { useApp } from "@/contexts/AppContext";
+import { useApp, GUEST_LIMITS } from "@/contexts/AppContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Coffee, Settings, Plus, History, TrendingUp, GitCompare, Package, Star, Sparkles, MessageCircle, ClipboardCheck, Shield, HelpCircle } from "lucide-react";
+import { Coffee, Settings, Plus, History, TrendingUp, GitCompare, Package, Star, Sparkles, MessageCircle, ClipboardCheck, Shield, HelpCircle, UserPlus } from "lucide-react";
 
 export default function Dashboard() {
-  const { user, brews, coffeeBeans, recipes, grinders, brewers, logout } = useApp();
+  const { user, brews, coffeeBeans, recipes, grinders, brewers, logout, isGuest } = useApp();
   const navigate = useNavigate();
 
   const recentBrews = brews.slice(0, 5);
   
   // Check if user is new (no beans added yet - they need to set up their own beans)
   const isNewUser = coffeeBeans.length === 0;
-  
 
 
   return (
@@ -136,18 +135,27 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        {isNewUser && (
-          <Alert className="border-primary/50 bg-primary/5">
-            <Sparkles className="h-4 w-4 text-primary" />
-            <AlertTitle className="text-primary">Welcome to Brew Journal!</AlertTitle>
-            <AlertDescription className="text-sm">
-              Get started by adding your coffee beans and equipment in Settings below.{" "}
-              <span 
-                className="text-primary font-medium cursor-pointer underline"
-                onClick={() => navigate("/guide")}
-              >
-                View the Getting Started guide
-              </span>
+        {(isNewUser || isGuest) && (
+          <Alert className={isGuest ? "border-amber-500/50 bg-amber-500/5" : "border-primary/50 bg-primary/5"}>
+            {isGuest ? <UserPlus className="h-4 w-4 text-amber-500" /> : <Sparkles className="h-4 w-4 text-primary" />}
+            <AlertTitle className={isGuest ? "text-amber-600" : "text-primary"}>
+              {isGuest ? "Welcome! You're in Guest Mode" : "Welcome to Brew Journal!"}
+            </AlertTitle>
+            <AlertDescription className="text-sm space-y-1">
+              {isNewUser && (
+                <p>
+                  Get started by adding your coffee beans and equipment in Settings below.{" "}
+                  <span 
+                    className={`${isGuest ? "text-amber-600" : "text-primary"} font-medium cursor-pointer underline`}
+                    onClick={() => navigate("/guide")}
+                  >
+                    View the Getting Started guide
+                  </span>
+                </p>
+              )}
+              {isGuest && (
+                <p>You're using limited features (max {GUEST_LIMITS.beans} items per category). Sign up to unlock unlimited access and keep your data safe.</p>
+              )}
             </AlertDescription>
           </Alert>
         )}
@@ -184,7 +192,7 @@ export default function Dashboard() {
           </Card>
         </div>
 
-        {user?.email === "admin@admin.com" && (
+        {user?.isAdmin && (
           <Card className="hover:shadow-md transition-shadow cursor-pointer border-amber-500/50 bg-amber-500/5" onClick={() => navigate("/admin")}>
             <CardContent className="p-4 flex items-center gap-3">
               <Shield className="h-6 w-6 text-amber-500" />
@@ -196,9 +204,19 @@ export default function Dashboard() {
           </Card>
         )}
 
-        <Button variant="outline" className="w-full" onClick={logout}>
-          Sign out
-        </Button>
+        {isGuest ? (
+          <Button className="w-full" onClick={() => {
+            logout();
+            navigate("/login");
+          }}>
+            <UserPlus className="h-4 w-4 mr-2" />
+            Sign up / Sign in
+          </Button>
+        ) : (
+          <Button variant="outline" className="w-full" onClick={logout}>
+            Sign out
+          </Button>
+        )}
       </div>
     </div>
   );

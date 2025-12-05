@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useApp } from "@/contexts/AppContext";
+import { useApp, GUEST_LIMITS } from "@/contexts/AppContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ArrowLeft, Plus, Pencil, Trash2, BookOpen, Timer, Star, Filter, Copy } from "lucide-react";
@@ -22,7 +22,7 @@ import {
 import type { Recipe } from "@/contexts/AppContext";
 
 export default function Recipes() {
-  const { recipes, grinders, brewers, deleteRecipe, toggleRecipeFavorite } = useApp();
+  const { recipes, grinders, brewers, deleteRecipe, toggleRecipeFavorite, isGuest, guestLimitReached } = useApp();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -41,24 +41,49 @@ export default function Recipes() {
   };
 
   const handleClone = (recipe: Recipe) => {
+    if (guestLimitReached("recipes")) {
+      toast({
+        title: "Guest Limit Reached",
+        description: `Guest users can only add ${GUEST_LIMITS.recipes} recipes. Sign up for unlimited access.`,
+        variant: "destructive",
+      });
+      return;
+    }
     setEditingRecipe(recipe);
     setIsCloning(true);
     setDialogOpen(true);
   };
 
   const handleAdd = () => {
+    if (guestLimitReached("recipes")) {
+      toast({
+        title: "Guest Limit Reached",
+        description: `Guest users can only add ${GUEST_LIMITS.recipes} recipes. Sign up for unlimited access.`,
+        variant: "destructive",
+      });
+      return;
+    }
     setEditingRecipe(null);
     setIsCloning(false);
     setDialogOpen(true);
   };
 
-  const handleDelete = (id: string) => {
-    deleteRecipe(id);
-    setDeleteId(null);
-    toast({
-      title: "Recipe deleted",
-      description: "Recipe has been removed successfully",
-    });
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteRecipe(id);
+      setDeleteId(null);
+      toast({
+        title: "Recipe deleted",
+        description: "Recipe has been removed successfully",
+      });
+    } catch (error) {
+      setDeleteId(null);
+      toast({
+        title: "Cannot delete",
+        description: error instanceof Error ? error.message : "Failed to delete recipe",
+        variant: "destructive",
+      });
+    }
   };
 
   const filteredRecipes = filter === "favorites" 

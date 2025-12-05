@@ -141,6 +141,12 @@ EMAILJS_PASSWORD_RESET_TEMPLATE_ID=your_reset_template_id
 
 # Optional: reCAPTCHA for contact form
 VITE_RECAPTCHA_SITE_KEY=your_site_key
+
+# Optional: Template user email - equipment/recipes from this user are copied to new users
+TEMPLATE_USER_EMAIL=admin@admin.com
+
+# Optional: Admin emails - comma-separated list of emails that can access admin dashboard
+ADMIN_EMAILS=admin@admin.com
 ```
 
 ### Development
@@ -159,6 +165,7 @@ The client dev server runs on port 5173 and proxies API requests to the server o
 
 ## Features
 
+- **Guest Mode**: Try the app without signing up (limited to 2 items per category), with option to migrate data when creating an account
 - **Brew Tracking**: Log brews with detailed parameters (dose, grind, water, temperature, time)
 - **Coffee Beans**: Manage beans with batches, track remaining weight, filter by roast type (espresso/pour-over)
 - **AI Coffee Bag Scanner**: Take photos of coffee bags (front/back) to auto-fill bean information using Gemini AI
@@ -175,6 +182,7 @@ The client dev server runs on port 5173 and proxies API requests to the server o
 - **Currency Settings**: Choose from 24+ currencies with auto-detection based on locale
 - **Export**: Export brew history to CSV or PDF
 - **Share**: Share brew details via native share or clipboard
+- **Dependency Protection**: User-friendly error messages when deleting items that are referenced by other data
 
 ## Security Features
 

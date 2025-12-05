@@ -4,20 +4,36 @@ import { AuthRequest } from '../middleware/auth.js';
 
 const router = Router();
 
-// Admin email constant
-const ADMIN_EMAIL = 'admin@admin.com';
+// Get admin emails from environment (comma-separated list)
+function getAdminEmails(): string[] {
+  const adminEmails = process.env.ADMIN_EMAILS || 'admin@admin.com';
+  return adminEmails.split(',').map(email => email.trim().toLowerCase());
+}
 
-// Get admin user ID
-function getAdminUserId(): number | null {
-  const admin = db.prepare('SELECT id FROM users WHERE email = ?').get(ADMIN_EMAIL) as { id: number } | undefined;
-  return admin?.id || null;
+// Get template user email from environment
+function getTemplateUserEmail(): string {
+  return process.env.TEMPLATE_USER_EMAIL || 'admin@admin.com';
+}
+
+// Get template user ID (for copying equipment/recipes)
+function getTemplateUserId(): number | null {
+  const templateEmail = getTemplateUserEmail();
+  const templateUser = db.prepare('SELECT id FROM users WHERE LOWER(email) = LOWER(?)').get(templateEmail) as { id: number } | undefined;
+  return templateUser?.id || null;
 }
 
 // Check if current user is admin
 function isAdmin(userId: number): boolean {
   const user = db.prepare('SELECT email FROM users WHERE id = ?').get(userId) as { email: string } | undefined;
-  return user?.email === ADMIN_EMAIL;
+  if (!user) return false;
+  const adminEmails = getAdminEmails();
+  const result = adminEmails.includes(user.email.toLowerCase());
+  console.log(`isAdmin check: userId=${userId}, email=${user.email}, adminEmails=${JSON.stringify(adminEmails)}, result=${result}`);
+  return result;
 }
+
+// Export for use in auth routes
+export { isAdmin };
 
 // Admin middleware
 function adminOnly(req: AuthRequest, res: Response, next: () => void) {
@@ -104,55 +120,55 @@ router.get('/stats/users/:date', adminOnly, (req: AuthRequest, res: Response) =>
   }
 });
 
-// Get admin grinders
+// Get template user's grinders (for "Copy from templates" feature)
 router.get('/grinders', (req: AuthRequest, res: Response) => {
-  const adminId = getAdminUserId();
-  if (!adminId) {
+  const templateUserId = getTemplateUserId();
+  if (!templateUserId) {
     return res.json([]);
   }
   
   const grinders = db.prepare(`
     SELECT id, model, photo, burr_type as burrType, ideal_for as idealFor 
     FROM grinders WHERE user_id = ?
-  `).all(adminId) as any[];
+  `).all(templateUserId) as any[];
   
   res.json(grinders.map(g => ({ ...g, id: String(g.id) })));
 });
 
-// Get admin brewers
+// Get template user's brewers
 router.get('/brewers', (req: AuthRequest, res: Response) => {
-  const adminId = getAdminUserId();
-  if (!adminId) {
+  const templateUserId = getTemplateUserId();
+  if (!templateUserId) {
     return res.json([]);
   }
   
   const brewers = db.prepare(`
     SELECT id, model, photo, type 
     FROM brewers WHERE user_id = ?
-  `).all(adminId) as any[];
+  `).all(templateUserId) as any[];
   
   res.json(brewers.map(b => ({ ...b, id: String(b.id) })));
 });
 
-// Get admin coffee servers
+// Get template user's coffee servers
 router.get('/coffee-servers', (req: AuthRequest, res: Response) => {
-  const adminId = getAdminUserId();
-  if (!adminId) {
+  const templateUserId = getTemplateUserId();
+  if (!templateUserId) {
     return res.json([]);
   }
   
   const servers = db.prepare(`
     SELECT id, model, photo, max_volume as maxVolume, empty_weight as emptyWeight 
     FROM coffee_servers WHERE user_id = ?
-  `).all(adminId) as any[];
+  `).all(templateUserId) as any[];
   
   res.json(servers.map(s => ({ ...s, id: String(s.id) })));
 });
 
-// Get admin recipes (without grinder/brewer IDs since those are user-specific)
+// Get template user's recipes (without grinder/brewer IDs since those are user-specific)
 router.get('/recipes', (req: AuthRequest, res: Response) => {
-  const adminId = getAdminUserId();
-  if (!adminId) {
+  const templateUserId = getTemplateUserId();
+  if (!templateUserId) {
     return res.json([]);
   }
   
@@ -164,7 +180,7 @@ router.get('/recipes', (req: AuthRequest, res: Response) => {
     LEFT JOIN grinders g ON r.grinder_id = g.id
     LEFT JOIN brewers b ON r.brewer_id = b.id
     WHERE r.user_id = ?
-  `).all(adminId) as any[];
+  `).all(templateUserId) as any[];
   
   res.json(recipes.map(r => ({
     ...r,
@@ -173,22 +189,30 @@ router.get('/recipes', (req: AuthRequest, res: Response) => {
   })));
 });
 
-// Get admin brew templates
+// Get template user's brew templates
 router.get('/brew-templates', (req: AuthRequest, res: Response) => {
-  const adminId = getAdminUserId();
-  if (!adminId) {
+  const templateUserId = getTemplateUserId();
+  if (!templateUserId) {
     return res.json([]);
   }
   
   const templates = db.prepare(`
     SELECT id, name, fields FROM brew_templates WHERE user_id = ?
-  `).all(adminId) as any[];
+  `).all(templateUserId) as any[];
   
   res.json(templates.map(t => ({
     id: String(t.id),
     name: t.name,
     fields: JSON.parse(t.fields),
   })));
+});
+
+// Check if current user is admin
+router.get('/check', (req: AuthRequest, res: Response) => {
+  if (!req.userId) {
+    return res.json({ isAdmin: false });
+  }
+  res.json({ isAdmin: isAdmin(req.userId) });
 });
 
 export default router;

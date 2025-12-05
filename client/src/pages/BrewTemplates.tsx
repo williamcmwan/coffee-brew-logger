@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { useApp } from "@/contexts/AppContext";
+import { useApp, GUEST_LIMITS } from "@/contexts/AppContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -31,7 +31,7 @@ import { useToast } from "@/hooks/use-toast";
 import type { BrewTemplate, BrewTemplateField } from "@/contexts/AppContext";
 
 export default function BrewTemplates() {
-  const { brewTemplates, addBrewTemplate, updateBrewTemplate, deleteBrewTemplate } = useApp();
+  const { brewTemplates, addBrewTemplate, updateBrewTemplate, deleteBrewTemplate, isGuest, guestLimitReached } = useApp();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -50,6 +50,14 @@ export default function BrewTemplates() {
   }, []);
 
   const handleAdd = () => {
+    if (guestLimitReached("templates")) {
+      toast({
+        title: "Guest Limit Reached",
+        description: `Guest users can only add ${GUEST_LIMITS.templates} brew templates. Sign up for unlimited access.`,
+        variant: "destructive",
+      });
+      return;
+    }
     setEditingTemplate(null);
     setTemplateName("");
     setFields([]);
@@ -111,13 +119,22 @@ export default function BrewTemplates() {
     setFields([]);
   };
 
-  const handleDelete = (id: string) => {
-    deleteBrewTemplate(id);
-    setDeleteId(null);
-    toast({
-      title: "Template deleted",
-      description: "Brew template has been removed successfully",
-    });
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteBrewTemplate(id);
+      setDeleteId(null);
+      toast({
+        title: "Template deleted",
+        description: "Brew template has been removed successfully",
+      });
+    } catch (error) {
+      setDeleteId(null);
+      toast({
+        title: "Cannot delete",
+        description: error instanceof Error ? error.message : "Failed to delete template",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleAddField = () => {

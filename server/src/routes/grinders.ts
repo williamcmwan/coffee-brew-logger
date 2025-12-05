@@ -54,8 +54,31 @@ router.put('/:id', (req: AuthRequest, res: Response) => {
 
 router.delete('/:id', (req: AuthRequest, res: Response) => {
   const userId = req.userId;
+  const { id } = req.params;
   
-  db.prepare('DELETE FROM grinders WHERE id = ? AND user_id = ?').run(req.params.id, userId);
+  // Check if grinder is used in any recipes
+  const recipeCount = db.prepare(
+    'SELECT COUNT(*) as count FROM recipes WHERE grinder_id = ? AND user_id = ?'
+  ).get(id, userId) as { count: number };
+  
+  if (recipeCount.count > 0) {
+    return res.status(400).json({ 
+      error: `Cannot delete this grinder. It is used in ${recipeCount.count} recipe(s). Please delete or update those recipes first.` 
+    });
+  }
+  
+  // Check if grinder is used in any brews
+  const brewCount = db.prepare(
+    'SELECT COUNT(*) as count FROM brews WHERE grinder_id = ? AND user_id = ?'
+  ).get(id, userId) as { count: number };
+  
+  if (brewCount.count > 0) {
+    return res.status(400).json({ 
+      error: `Cannot delete this grinder. It is used in ${brewCount.count} brew(s). Please delete those brews first.` 
+    });
+  }
+  
+  db.prepare('DELETE FROM grinders WHERE id = ? AND user_id = ?').run(id, userId);
   res.json({ success: true });
 });
 

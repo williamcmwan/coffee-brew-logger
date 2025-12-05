@@ -7,7 +7,20 @@ export interface User {
   name: string;
   authProvider?: string;
   avatarUrl?: string;
+  isGuest?: boolean;
+  isAdmin?: boolean;
 }
+
+// Guest user limits
+export const GUEST_LIMITS = {
+  beans: 2,
+  grinders: 2,
+  brewers: 2,
+  servers: 2,
+  recipes: 2,
+  templates: 2,
+  brews: 2,
+};
 
 export interface BrewTemplate {
   id: string;
@@ -135,8 +148,11 @@ interface AppContextType {
   login: (email: string, password: string) => Promise<void>;
   signup: (email: string, password: string, confirmPassword: string, name: string) => Promise<void>;
   socialLogin: (provider: 'google' | 'apple', idToken: string) => Promise<void>;
+  guestLogin: () => Promise<void>;
   changePassword: (currentPassword: string, newPassword: string, confirmNewPassword: string) => Promise<void>;
   logout: () => void;
+  isGuest: boolean;
+  guestLimitReached: (type: keyof typeof GUEST_LIMITS) => boolean;
   grinders: Grinder[];
   addGrinder: (grinder: Omit<Grinder, "id">) => Promise<void>;
   updateGrinder: (id: string, grinder: Partial<Grinder>) => Promise<void>;
@@ -266,6 +282,42 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     localStorage.setItem("user", JSON.stringify(userWithoutToken));
     localStorage.setItem("userId", String(userData.id));
     await loadData();
+  };
+
+  const getOrCreateDeviceId = (): string => {
+    let deviceId = localStorage.getItem("guestDeviceId");
+    if (!deviceId) {
+      deviceId = crypto.randomUUID() + '-' + Date.now().toString(36);
+      localStorage.setItem("guestDeviceId", deviceId);
+    }
+    return deviceId;
+  };
+
+  const guestLogin = async () => {
+    const deviceId = getOrCreateDeviceId();
+    const userData = await api.auth.guest(deviceId);
+    const userWithoutToken = { ...userData, isGuest: true };
+    delete (userWithoutToken as any).token;
+    setUser(userWithoutToken);
+    localStorage.setItem("user", JSON.stringify(userWithoutToken));
+    localStorage.setItem("userId", String(userData.id));
+    await loadData();
+  };
+
+  const isGuest = user?.authProvider === 'guest' || user?.isGuest === true;
+
+  const guestLimitReached = (type: keyof typeof GUEST_LIMITS): boolean => {
+    if (!isGuest) return false;
+    const counts: Record<keyof typeof GUEST_LIMITS, number> = {
+      beans: coffeeBeans.length,
+      grinders: grinders.length,
+      brewers: brewers.length,
+      servers: coffeeServers.length,
+      recipes: recipes.length,
+      templates: brewTemplates.length,
+      brews: brews.length,
+    };
+    return counts[type] >= GUEST_LIMITS[type];
   };
 
   const logout = () => {
@@ -404,7 +456,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   return (
     <AppContext.Provider
       value={{
-        user, login, signup, socialLogin, changePassword, logout,
+        user, login, signup, socialLogin, guestLogin, changePassword, logout,
+        isGuest, guestLimitReached,
         grinders, addGrinder, updateGrinder, deleteGrinder,
         brewers, addBrewer, updateBrewer, deleteBrewer,
         recipes, addRecipe, updateRecipe, deleteRecipe, toggleRecipeFavorite,

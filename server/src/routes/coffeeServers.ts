@@ -57,8 +57,20 @@ router.put('/:id', (req: AuthRequest, res: Response) => {
 
 router.delete('/:id', (req: AuthRequest, res: Response) => {
   const userId = req.userId;
+  const { id } = req.params;
   
-  db.prepare('DELETE FROM coffee_servers WHERE id = ? AND user_id = ?').run(req.params.id, userId);
+  // Check if coffee server is used in any brews
+  const brewCount = db.prepare(
+    'SELECT COUNT(*) as count FROM brews WHERE coffee_server_id = ? AND user_id = ?'
+  ).get(id, userId) as { count: number };
+  
+  if (brewCount.count > 0) {
+    return res.status(400).json({ 
+      error: `Cannot delete this coffee server. It is used in ${brewCount.count} brew(s). Please delete those brews first.` 
+    });
+  }
+  
+  db.prepare('DELETE FROM coffee_servers WHERE id = ? AND user_id = ?').run(id, userId);
   res.json({ success: true });
 });
 

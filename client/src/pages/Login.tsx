@@ -8,8 +8,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Separator } from "@/components/ui/separator";
 import { Coffee } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { setAuthToken } from "@/lib/api";
+import { setAuthToken, api } from "@/lib/api";
 import ReCAPTCHA from "react-google-recaptcha";
+import { GuestMigrationDialog } from "@/components/GuestMigrationDialog";
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || "";
 const RECAPTCHA_SITE_KEY = import.meta.env.VITE_RECAPTCHA_SITE_KEY || "";
@@ -23,9 +24,13 @@ export default function Login() {
   const [name, setName] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [socialLoading, setSocialLoading] = useState<"google" | null>(null);
+  const [guestLoading, setGuestLoading] = useState(false);
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [showMigrationDialog, setShowMigrationDialog] = useState(false);
+  const [isNewAccountForMigration, setIsNewAccountForMigration] = useState(false);
+  const [pendingRedirect, setPendingRedirect] = useState(false);
   const recaptchaRef = useRef<ReCAPTCHA>(null);
-  const { login, signup, user } = useApp();
+  const { login, signup, guestLogin, user } = useApp();
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -39,8 +44,38 @@ export default function Login() {
     }
     if (token) {
       setAuthToken(token);
-      localStorage.setItem("user", JSON.stringify({ id: 0 }));
-      window.location.href = "/dashboard";
+      // Fetch full user info including isAdmin
+      api.auth.getCurrentUser().then(userData => {
+        localStorage.setItem("user", JSON.stringify(userData));
+        localStorage.setItem("userId", String(userData.id));
+        // Check for guest data migration after Google OAuth
+        const guestDeviceId = localStorage.getItem("guestDeviceId");
+        if (guestDeviceId) {
+          api.auth.getGuestData(guestDeviceId).then(guestData => {
+            if (guestData.exists && guestData.counts) {
+              const totalItems = Object.values(guestData.counts).reduce((a, b) => a + b, 0);
+              if (totalItems > 0) {
+                setIsNewAccountForMigration(false);
+                setShowMigrationDialog(true);
+                setPendingRedirect(true);
+                setSearchParams({});
+                return;
+              }
+            }
+            localStorage.removeItem("guestDeviceId");
+            window.location.href = "/dashboard";
+          }).catch(() => {
+            localStorage.removeItem("guestDeviceId");
+            window.location.href = "/dashboard";
+          });
+        } else {
+          window.location.href = "/dashboard";
+        }
+      }).catch(() => {
+        // Fallback if getCurrentUser fails
+        localStorage.setItem("user", JSON.stringify({ id: 0 }));
+        window.location.href = "/dashboard";
+      });
     }
   }, [searchParams, setSearchParams, toast]);
 
@@ -51,6 +86,54 @@ export default function Login() {
   const handleGoogleSignIn = () => {
     setSocialLoading("google");
     window.location.href = "/api/auth/google";
+  };
+
+  const handleGuestLogin = async () => {
+    setGuestLoading(true);
+    try {
+      await guestLogin();
+      toast({ title: "Welcome!", description: "You're using the app as a guest with limited features" });
+      window.location.href = "/dashboard";
+    } catch (error) {
+      toast({ title: "Error", description: error instanceof Error ? error.message : "Failed to continue as guest", variant: "destructive" });
+      setGuestLoading(false);
+    }
+  };
+
+  const checkGuestDataAndProceed = async (isNewAccount: boolean) => {
+    const guestDeviceId = localStorage.getItem("guestDeviceId");
+    if (guestDeviceId) {
+      try {
+        const guestData = await api.auth.getGuestData(guestDeviceId);
+        if (guestData.exists && guestData.counts) {
+          const totalItems = Object.values(guestData.counts).reduce((a, b) => a + b, 0);
+          if (totalItems > 0) {
+            setIsNewAccountForMigration(isNewAccount);
+            setShowMigrationDialog(true);
+            setPendingRedirect(true);
+            return;
+          }
+        }
+      } catch (e) {
+        console.error("Failed to check guest data:", e);
+      }
+      localStorage.removeItem("guestDeviceId");
+    }
+    window.location.href = "/dashboard";
+  };
+
+  const handleMigrate = async () => {
+    const guestDeviceId = localStorage.getItem("guestDeviceId");
+    if (guestDeviceId) {
+      await api.auth.migrateGuest(guestDeviceId);
+      toast({ title: "Success", description: "Your guest data has been migrated to your account" });
+    }
+  };
+
+  const handleMigrationComplete = () => {
+    if (pendingRedirect) {
+      window.location.href = "/dashboard";
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -67,13 +150,14 @@ export default function Login() {
       if (isLogin) {
         await login(email.trim(), password);
         toast({ title: "Welcome back!", description: "You have successfully logged in" });
+        await checkGuestDataAndProceed(false);
       } else {
         if (!name.trim()) throw new Error("Please enter your name");
         if (password !== confirmPassword) throw new Error("Passwords do not match");
         await signup(email.trim(), password, confirmPassword, name.trim());
         toast({ title: "Account created!", description: "Welcome to your brew journal" });
+        await checkGuestDataAndProceed(true);
       }
-      window.location.href = "/dashboard";
     } catch (error) {
       toast({ title: isLogin ? "Login failed" : "Sign up failed", description: error instanceof Error ? error.message : "An error occurred", variant: "destructive" });
       setIsLoading(false);
@@ -82,7 +166,7 @@ export default function Login() {
     }
   };
 
-  const isAnyLoading = isLoading || socialLoading !== null;
+  const isAnyLoading = isLoading || socialLoading !== null || guestLoading;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-secondary/20 to-background flex items-center justify-center p-4">
@@ -97,6 +181,17 @@ export default function Login() {
           <CardDescription>{isLogin ? "Enter your credentials to access your brew journal" : "Sign up to start tracking your perfect brews"}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          <Button variant="outline" className="w-full h-[44px]" onClick={handleGuestLogin} disabled={isAnyLoading}>
+            {guestLoading ? "Please wait..." : (
+              <span className="flex items-center">
+                <Coffee className="mr-2 h-4 w-4" />
+                Continue Without Signing In
+              </span>
+            )}
+          </Button>
+          <p className="text-xs text-center text-muted-foreground -mt-2">
+            Guest mode has limited features (max 2 items per category)
+          </p>
           {GOOGLE_CLIENT_ID && (
             <Button variant="outline" className="w-full h-[44px]" onClick={handleGoogleSignIn} disabled={isAnyLoading}>
               {socialLoading === "google" ? "Redirecting to Google..." : (
@@ -156,6 +251,14 @@ export default function Login() {
           </div>
         </CardContent>
       </Card>
+
+      <GuestMigrationDialog
+        open={showMigrationDialog}
+        onOpenChange={setShowMigrationDialog}
+        isNewAccount={isNewAccountForMigration}
+        onMigrate={handleMigrate}
+        onSkip={handleMigrationComplete}
+      />
     </div>
   );
 }

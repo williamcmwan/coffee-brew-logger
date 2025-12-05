@@ -35,8 +35,6 @@ interface Totals {
   totalOutputTokens: number;
 }
 
-const ADMIN_EMAIL = "admin@admin.com";
-
 export default function Admin() {
   const navigate = useNavigate();
   const { user } = useApp();
@@ -49,7 +47,7 @@ export default function Admin() {
   const [loadingUsers, setLoadingUsers] = useState<string | null>(null);
 
   useEffect(() => {
-    if (user?.email !== ADMIN_EMAIL) {
+    if (!user?.isAdmin) {
       navigate("/dashboard");
       return;
     }
@@ -92,7 +90,7 @@ export default function Admin() {
 
   const formatNumber = (num: number) => num.toLocaleString();
 
-  if (user?.email !== ADMIN_EMAIL) {
+  if (!user?.isAdmin) {
     return null;
   }
 

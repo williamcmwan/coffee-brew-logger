@@ -124,6 +124,19 @@ export function RecipeDialog({ open, onOpenChange, recipe, isCloning = false }: 
     },
   });
 
+  // Scroll to first validation error - receives errors from handleSubmit callback
+  const onFormError = (formErrors: typeof errors) => {
+    const firstErrorKey = Object.keys(formErrors)[0];
+    if (firstErrorKey) {
+      // Find the element by id (input fields have id matching the field name)
+      const element = document.getElementById(firstErrorKey);
+      if (element) {
+        element.scrollIntoView({ behavior: "smooth", block: "center" });
+        element.focus();
+      }
+    }
+  };
+
   const grinderId = watch("grinderId");
   const brewerId = watch("brewerId");
   const photo = watch("photo");
@@ -278,7 +291,7 @@ export function RecipeDialog({ open, onOpenChange, recipe, isCloning = false }: 
         <DialogHeader>
           <DialogTitle>{isCloning ? "Clone Recipe" : recipe ? "Edit Recipe" : "Add Recipe"}</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <form onSubmit={handleSubmit(onSubmit, onFormError)} className="space-y-4">
           {!recipe && !isCloning && adminRecipes.length > 0 && (
             <div className="space-y-2">
               <Button

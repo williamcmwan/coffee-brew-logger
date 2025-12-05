@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useApp } from "@/contexts/AppContext";
+import { useApp, GUEST_LIMITS } from "@/contexts/AppContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ArrowLeft, Plus, Pencil, Trash2, GlassWater } from "lucide-react";
@@ -19,7 +19,7 @@ import {
 import type { CoffeeServer } from "@/contexts/AppContext";
 
 export default function CoffeeServers() {
-  const { coffeeServers, deleteCoffeeServer } = useApp();
+  const { coffeeServers, deleteCoffeeServer, isGuest, guestLimitReached } = useApp();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -32,6 +32,14 @@ export default function CoffeeServers() {
   };
 
   const handleAdd = () => {
+    if (guestLimitReached("servers")) {
+      toast({
+        title: "Guest Limit Reached",
+        description: `Guest users can only add ${GUEST_LIMITS.servers} coffee servers. Sign up for unlimited access.`,
+        variant: "destructive",
+      });
+      return;
+    }
     setEditingServer(null);
     setDialogOpen(true);
   };
@@ -45,8 +53,9 @@ export default function CoffeeServers() {
         description: "Coffee server has been removed successfully",
       });
     } catch (error) {
+      setDeleteId(null);
       toast({
-        title: "Error",
+        title: "Cannot delete",
         description: error instanceof Error ? error.message : "Failed to delete coffee server",
         variant: "destructive",
       });

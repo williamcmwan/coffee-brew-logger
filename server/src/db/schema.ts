@@ -7,6 +7,9 @@ const dbPath = path.join(__dirname, '../../data/brew-journal.db');
 
 export const db: DatabaseType = new Database(dbPath);
 
+// Enable foreign key constraints
+db.pragma('foreign_keys = ON');
+
 export function initializeDatabase() {
   db.exec(`
     CREATE TABLE IF NOT EXISTS users (

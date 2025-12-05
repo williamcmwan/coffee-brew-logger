@@ -13,6 +13,7 @@ import {
   resetPasswordSchema,
 } from '../middleware/validation.js';
 import { authMiddleware, AuthRequest } from '../middleware/auth.js';
+import { isAdmin } from './admin.js';
 import crypto from 'crypto';
 
 const router = Router();
@@ -131,6 +132,7 @@ router.post('/login', async (req, res) => {
       name: user.name, 
       authProvider: user.auth_provider, 
       avatarUrl: user.avatar_url,
+      isAdmin: isAdmin(user.id),
       token 
     });
   } catch (error) {
@@ -166,7 +168,7 @@ router.post('/signup', async (req, res) => {
     seedUserDefaults(newUserId);
     
     const token = generateToken(newUserId);
-    res.json({ id: newUserId, email: email.toLowerCase(), name, authProvider: 'email', token });
+    res.json({ id: newUserId, email: email.toLowerCase(), name, authProvider: 'email', isAdmin: isAdmin(newUserId), token });
   } catch (error) {
     console.error('Signup error:', error);
     res.status(500).json({ error: 'An error occurred during signup' });
@@ -226,7 +228,7 @@ router.post('/social', async (req, res) => {
         user.avatar_url = avatarUrl;
       }
       const token = generateToken(user.id);
-      return res.json({ id: user.id, email: user.email, name: user.name, authProvider: user.auth_provider, avatarUrl: user.avatar_url, token });
+      return res.json({ id: user.id, email: user.email, name: user.name, authProvider: user.auth_provider, avatarUrl: user.avatar_url, isAdmin: isAdmin(user.id), token });
     }
     
     // Check if email exists with different auth method
@@ -242,7 +244,7 @@ router.post('/social', async (req, res) => {
         .get(existingByEmail.id) as User;
       
       const token = generateToken(updatedUser.id);
-      return res.json({ id: updatedUser.id, email: updatedUser.email, name: updatedUser.name, authProvider: updatedUser.auth_provider, avatarUrl: updatedUser.avatar_url, token });
+      return res.json({ id: updatedUser.id, email: updatedUser.email, name: updatedUser.name, authProvider: updatedUser.auth_provider, avatarUrl: updatedUser.avatar_url, isAdmin: isAdmin(updatedUser.id), token });
     }
     
     // Create new user
@@ -254,7 +256,7 @@ router.post('/social', async (req, res) => {
     seedUserDefaults(newUserId);
     
     const token = generateToken(newUserId);
-    res.json({ id: newUserId, email: email.toLowerCase(), name: displayName, authProvider: provider, avatarUrl, token });
+    res.json({ id: newUserId, email: email.toLowerCase(), name: displayName, authProvider: provider, avatarUrl, isAdmin: isAdmin(newUserId), token });
   } catch (error) {
     console.error('Social login error:', error);
     res.status(500).json({ error: 'An error occurred during social login' });
@@ -398,6 +400,168 @@ router.post('/reset-password', async (req, res) => {
   } catch (error) {
     console.error('Reset password error:', error);
     res.status(500).json({ error: 'An error occurred while resetting password' });
+  }
+});
+
+// Guest login - creates or retrieves a guest user based on device ID
+router.post('/guest', async (req, res) => {
+  try {
+    const { deviceId } = req.body;
+    
+    if (!deviceId || typeof deviceId !== 'string' || deviceId.length < 16) {
+      return res.status(400).json({ error: 'Invalid device ID' });
+    }
+    
+    // Check if guest user already exists for this device
+    let user = db.prepare('SELECT id, email, name, auth_provider FROM users WHERE auth_provider = ? AND provider_id = ?')
+      .get('guest', deviceId) as User | undefined;
+    
+    if (user) {
+      const token = generateToken(user.id);
+      return res.json({ 
+        id: user.id, 
+        email: user.email, 
+        name: user.name, 
+        authProvider: 'guest',
+        isGuest: true,
+        token 
+      });
+    }
+    
+    // Create new guest user
+    const guestEmail = `guest_${deviceId.substring(0, 8)}@guest.local`;
+    const guestName = 'Guest User';
+    
+    const insertResult = db.prepare('INSERT INTO users (email, name, auth_provider, provider_id) VALUES (?, ?, ?, ?)')
+      .run(guestEmail, guestName, 'guest', deviceId);
+    
+    const newUserId = Number(insertResult.lastInsertRowid);
+    seedUserDefaults(newUserId);
+    
+    const token = generateToken(newUserId);
+    res.json({ 
+      id: newUserId, 
+      email: guestEmail, 
+      name: guestName, 
+      authProvider: 'guest',
+      isGuest: true,
+      token 
+    });
+  } catch (error) {
+    console.error('Guest login error:', error);
+    res.status(500).json({ error: 'An error occurred during guest login' });
+  }
+});
+
+// Migrate guest data to a real account
+router.post('/migrate-guest', authMiddleware, async (req: AuthRequest, res) => {
+  try {
+    const { guestDeviceId } = req.body;
+    const targetUserId = req.userId;
+    
+    if (!guestDeviceId) {
+      return res.status(400).json({ error: 'Guest device ID required' });
+    }
+    
+    // Find the guest user
+    const guestUser = db.prepare('SELECT id FROM users WHERE auth_provider = ? AND provider_id = ?')
+      .get('guest', guestDeviceId) as { id: number } | undefined;
+    
+    if (!guestUser) {
+      return res.status(404).json({ error: 'Guest account not found' });
+    }
+    
+    if (guestUser.id === targetUserId) {
+      return res.status(400).json({ error: 'Cannot migrate to the same account' });
+    }
+    
+    const guestId = guestUser.id;
+    
+    // Get counts of items to migrate
+    const counts = {
+      beans: (db.prepare('SELECT COUNT(*) as count FROM coffee_beans WHERE user_id = ?').get(guestId) as { count: number }).count,
+      grinders: (db.prepare('SELECT COUNT(*) as count FROM grinders WHERE user_id = ?').get(guestId) as { count: number }).count,
+      brewers: (db.prepare('SELECT COUNT(*) as count FROM brewers WHERE user_id = ?').get(guestId) as { count: number }).count,
+      servers: (db.prepare('SELECT COUNT(*) as count FROM coffee_servers WHERE user_id = ?').get(guestId) as { count: number }).count,
+      recipes: (db.prepare('SELECT COUNT(*) as count FROM recipes WHERE user_id = ?').get(guestId) as { count: number }).count,
+      templates: (db.prepare('SELECT COUNT(*) as count FROM brew_templates WHERE user_id = ?').get(guestId) as { count: number }).count,
+      brews: (db.prepare('SELECT COUNT(*) as count FROM brews WHERE user_id = ?').get(guestId) as { count: number }).count,
+    };
+    
+    // Migrate all data from guest to target user
+    db.prepare('UPDATE coffee_beans SET user_id = ? WHERE user_id = ?').run(targetUserId, guestId);
+    db.prepare('UPDATE grinders SET user_id = ? WHERE user_id = ?').run(targetUserId, guestId);
+    db.prepare('UPDATE brewers SET user_id = ? WHERE user_id = ?').run(targetUserId, guestId);
+    db.prepare('UPDATE coffee_servers SET user_id = ? WHERE user_id = ?').run(targetUserId, guestId);
+    db.prepare('UPDATE recipes SET user_id = ? WHERE user_id = ?').run(targetUserId, guestId);
+    db.prepare('UPDATE brew_templates SET user_id = ? WHERE user_id = ?').run(targetUserId, guestId);
+    db.prepare('UPDATE brews SET user_id = ? WHERE user_id = ?').run(targetUserId, guestId);
+    
+    // Delete the guest user
+    db.prepare('DELETE FROM users WHERE id = ?').run(guestId);
+    
+    res.json({ 
+      message: 'Guest data migrated successfully',
+      migrated: counts
+    });
+  } catch (error) {
+    console.error('Guest migration error:', error);
+    res.status(500).json({ error: 'An error occurred during migration' });
+  }
+});
+
+// Get current user info (for OAuth redirect flow)
+router.get('/me', authMiddleware, async (req: AuthRequest, res) => {
+  try {
+    const userId = req.userId;
+    const user = db.prepare('SELECT id, email, name, auth_provider, avatar_url FROM users WHERE id = ?')
+      .get(userId) as User | undefined;
+    
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    res.json({
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      authProvider: user.auth_provider,
+      avatarUrl: user.avatar_url,
+      isAdmin: isAdmin(user.id),
+    });
+  } catch (error) {
+    console.error('Get current user error:', error);
+    res.status(500).json({ error: 'An error occurred' });
+  }
+});
+
+// Get guest data counts for migration preview
+router.get('/guest-data/:deviceId', async (req, res) => {
+  try {
+    const { deviceId } = req.params;
+    
+    const guestUser = db.prepare('SELECT id FROM users WHERE auth_provider = ? AND provider_id = ?')
+      .get('guest', deviceId) as { id: number } | undefined;
+    
+    if (!guestUser) {
+      return res.json({ exists: false, counts: null });
+    }
+    
+    const guestId = guestUser.id;
+    const counts = {
+      beans: (db.prepare('SELECT COUNT(*) as count FROM coffee_beans WHERE user_id = ?').get(guestId) as { count: number }).count,
+      grinders: (db.prepare('SELECT COUNT(*) as count FROM grinders WHERE user_id = ?').get(guestId) as { count: number }).count,
+      brewers: (db.prepare('SELECT COUNT(*) as count FROM brewers WHERE user_id = ?').get(guestId) as { count: number }).count,
+      servers: (db.prepare('SELECT COUNT(*) as count FROM coffee_servers WHERE user_id = ?').get(guestId) as { count: number }).count,
+      recipes: (db.prepare('SELECT COUNT(*) as count FROM recipes WHERE user_id = ?').get(guestId) as { count: number }).count,
+      templates: (db.prepare('SELECT COUNT(*) as count FROM brew_templates WHERE user_id = ?').get(guestId) as { count: number }).count,
+      brews: (db.prepare('SELECT COUNT(*) as count FROM brews WHERE user_id = ?').get(guestId) as { count: number }).count,
+    };
+    
+    res.json({ exists: true, counts });
+  } catch (error) {
+    console.error('Get guest data error:', error);
+    res.status(500).json({ error: 'An error occurred' });
   }
 });
 

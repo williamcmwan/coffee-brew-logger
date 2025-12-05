@@ -36,13 +36,18 @@ const recipeSchema = z.object({
   grinderId: z.string().min(1, "Grinder is required"),
   brewerId: z.string().min(1, "Brewer is required"),
   ratio: z.string().trim().min(1, "Ratio is required").max(20),
-  dose: z.number().min(1, "Dose must be at least 1g").max(1000),
+  dose: z.number({ required_error: "Dose is required", invalid_type_error: "Dose must be a number" })
+    .min(1, "Dose must be at least 1g").max(1000),
   photo: z.string().optional().or(z.literal("")),
   process: z.string().trim().optional().or(z.literal("")),
-  grindSize: z.number().min(0, "Grind size must be at least 0").max(100),
-  water: z.number().min(1, "Water must be at least 1g").max(10000),
-  yield: z.number().min(1, "Yield must be at least 1g").max(10000),
-  temperature: z.number().min(1, "Temperature must be at least 1°C").max(100),
+  grindSize: z.number({ required_error: "Grind size is required", invalid_type_error: "Grind size must be a number" })
+    .min(0, "Grind size must be at least 0").max(100),
+  water: z.number({ required_error: "Water is required", invalid_type_error: "Water must be a number" })
+    .min(1, "Water must be at least 1g").max(10000),
+  yield: z.number({ required_error: "Yield is required", invalid_type_error: "Yield must be a number" })
+    .min(1, "Yield must be at least 1g").max(10000),
+  temperature: z.number({ required_error: "Temperature is required", invalid_type_error: "Temperature must be a number" })
+    .min(1, "Temperature must be at least 1°C").max(100),
   brewTime: z.string().trim().min(1, "Brew time is required").max(20),
 });
 
@@ -125,12 +130,20 @@ export function RecipeDialog({ open, onOpenChange, recipe, isCloning = false }: 
 
   useEffect(() => {
     if (recipe) {
-      Object.entries(recipe).forEach(([key, value]) => {
-        if (key === 'name' && isCloning) {
-          setValue('name', `${value} (Copy)`);
-        } else if (key !== 'id') {
-          setValue(key as any, value);
-        }
+      // Reset form first, then set values
+      reset({
+        name: isCloning ? `${recipe.name} (Copy)` : recipe.name,
+        grinderId: recipe.grinderId,
+        brewerId: recipe.brewerId,
+        ratio: recipe.ratio,
+        dose: recipe.dose,
+        photo: recipe.photo || "",
+        process: recipe.process || "",
+        grindSize: recipe.grindSize,
+        water: recipe.water,
+        yield: recipe.yield,
+        temperature: recipe.temperature,
+        brewTime: recipe.brewTime,
       });
       if (recipe.processSteps && recipe.processSteps.length > 0) {
         setProcessSteps([...recipe.processSteps]);
@@ -146,7 +159,7 @@ export function RecipeDialog({ open, onOpenChange, recipe, isCloning = false }: 
       setProcessSteps([{ description: "", waterAmount: 0, duration: 30 }]);
       setElapsedTimeInputs({ 0: "30" });
     }
-  }, [recipe, isCloning, setValue, reset]);
+  }, [recipe, isCloning, reset]);
 
   const onSubmit = async (data: RecipeFormData) => {
     if (grinders.length === 0) {
@@ -360,7 +373,7 @@ export function RecipeDialog({ open, onOpenChange, recipe, isCloning = false }: 
               <Input
                 id="dose"
                 type="number"
-                step="0.1"
+                step="any"
                 {...register("dose", { valueAsNumber: true })}
               />
               {errors.dose && <p className="text-sm text-destructive">{errors.dose.message}</p>}
@@ -466,7 +479,7 @@ export function RecipeDialog({ open, onOpenChange, recipe, isCloning = false }: 
               <Input
                 id="grindSize"
                 type="number"
-                step="0.001"
+                step="any"
                 {...register("grindSize", { valueAsNumber: true })}
               />
               {errors.grindSize && <p className="text-sm text-destructive">{errors.grindSize.message}</p>}
@@ -477,7 +490,7 @@ export function RecipeDialog({ open, onOpenChange, recipe, isCloning = false }: 
               <Input
                 id="water"
                 type="number"
-                step="1"
+                step="any"
                 {...register("water", { valueAsNumber: true })}
               />
               {errors.water && <p className="text-sm text-destructive">{errors.water.message}</p>}
@@ -488,7 +501,7 @@ export function RecipeDialog({ open, onOpenChange, recipe, isCloning = false }: 
               <Input
                 id="yield"
                 type="number"
-                step="1"
+                step="any"
                 {...register("yield", { valueAsNumber: true })}
               />
               {errors.yield && <p className="text-sm text-destructive">{errors.yield.message}</p>}
@@ -501,7 +514,7 @@ export function RecipeDialog({ open, onOpenChange, recipe, isCloning = false }: 
               <Input
                 id="temperature"
                 type="number"
-                step="0.1"
+                step="any"
                 {...register("temperature", { valueAsNumber: true })}
               />
               {errors.temperature && <p className="text-sm text-destructive">{errors.temperature.message}</p>}

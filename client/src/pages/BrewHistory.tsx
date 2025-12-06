@@ -420,7 +420,7 @@ export default function BrewHistory() {
                                 <Calendar className="h-4 w-4" />
                                 {new Date(brew.date).toLocaleDateString()}
                               </span>
-                              <div className="hidden xs:block">{renderStars(brew.rating)}</div>
+                              {renderStars(brew.rating)}
                             </div>
                             <div className="flex items-center shrink-0">
                               <Button 
@@ -576,6 +576,14 @@ export default function BrewHistory() {
                               </Button>
                             </div>
                           </div>
+
+                          {/* Overall Rating Section */}
+                          {brew.rating != null && brew.rating > 0 && (
+                            <div className="mt-4">
+                              <h4 className="font-semibold mb-2 text-sm text-espresso">Overall Rating</h4>
+                              {renderStars(brew.rating)}
+                            </div>
+                          )}
 
                           {/* Comment Section */}
                           {brew.comment && (
